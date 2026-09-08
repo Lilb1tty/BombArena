@@ -122,7 +122,8 @@ export class RealtimeRuntime {
   private heartbeatTimer: NodeJS.Timeout | undefined;
   private readonly heartbeatAlive = new Map<WebSocket, boolean>();
   private attached = false;
-  private closed = false;
+  private disposed = false;
+  private closing: Promise<void> | undefined;
 
   public constructor(private readonly options: RealtimeRuntimeOptions) {
     this.rooms = options.rooms ?? new RoomDirectory();
@@ -172,9 +173,20 @@ export class RealtimeRuntime {
     for (const game of this.games.values()) game.tick();
   }
 
-  public async close(): Promise<void> {
-    if (this.closed) return;
-    this.closed = true;
+  public close(): Promise<void> {
+    if (this.disposed) return Promise.resolve();
+    if (this.closing !== undefined) return this.closing;
+    this.closing = this.closeOnce()
+      .then(() => {
+        this.disposed = true;
+      })
+      .finally(() => {
+        this.closing = undefined;
+      });
+    return this.closing;
+  }
+
+  private async closeOnce(): Promise<void> {
     if (this.timer !== undefined) clearInterval(this.timer);
     this.timer = undefined;
     this.nextTickAtMs = undefined;
@@ -295,6 +307,7 @@ export class AuthoritativeRoom {
   private readonly inputTimes = new Map<string, number[]>();
   private readonly engine: GameEngine;
   private pendingResult: NewGameResult | undefined;
+  private completedResultPrepared = false;
   private resultPersistence: Promise<void> | undefined;
   private resultPersistenceError: unknown;
 
@@ -479,7 +492,8 @@ export class AuthoritativeRoom {
     outcome: NonNullable<GameSnapshot["outcome"]>,
   ): void {
     if (this.recordResult === undefined) return;
-    if (this.pendingResult === undefined) {
+    if (!this.completedResultPrepared) {
+      this.completedResultPrepared = true;
       const snapshot = this.engine.snapshot();
       this.pendingResult = {
         status: "completed",

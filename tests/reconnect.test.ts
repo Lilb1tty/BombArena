@@ -180,6 +180,34 @@ test("a failed completed Result remains pending until it is recorded", async () 
   assert.equal(attempts, 2);
 });
 
+test("a completed Game Result is recorded only once after later Ticks", async () => {
+  let writes = 0;
+  const room = new AuthoritativeRoom(
+    "ONCE",
+    ["first", "second"],
+    10,
+    Date.now,
+    async () => {
+      writes += 1;
+    },
+  );
+  const player = new FakeSocket();
+  room.connect(player, "first");
+  player.clientMessage({
+    version: 1,
+    type: "input",
+    requestId: "place-bomb",
+    payload: { type: "placeBomb" },
+  });
+  for (let tick = 0; tick < 42; tick += 1) room.tick();
+  await new Promise((resolve) => setImmediate(resolve));
+  room.tick();
+  room.tick();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(writes, 1);
+});
+
 class FakeSocket implements RealtimeSocket {
   public readyState = WebSocket.OPEN;
   private readonly messages: unknown[] = [];
