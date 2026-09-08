@@ -18,42 +18,47 @@ import {
 } from "../game/engine.js";
 import { RoomDirectory, RoomError } from "../rooms/index.js";
 import { type OperationsMetrics } from "../operations/index.js";
-import { GameResultWriter } from "../results/index.js";
+import { type GameResultWriter, type NewGameResult } from "../results/index.js";
 
 export const REALTIME_PROTOCOL_VERSION = 1;
 
 type RealtimeMessage =
-  | Readonly<{ type: "input"; input: GameInput }>
-  | Readonly<{ type: "resync" }>
-  | Readonly<{ type: "ping" }>;
+  | Readonly<{ type: "input"; requestId: string; payload: GameInput }>
+  | Readonly<{ type: "resync"; requestId: string }>
+  | Readonly<{ type: "ping"; requestId: string }>;
 
 type RealtimeResponse =
   | Readonly<{
       version: typeof REALTIME_PROTOCOL_VERSION;
       type: "snapshot";
-      roomCode: string;
-      snapshot: GameSnapshot;
+      requestId: string;
+      payload: Readonly<{ roomCode: string; snapshot: GameSnapshot }>;
     }>
   | Readonly<{
       version: typeof REALTIME_PROTOCOL_VERSION;
       type: "delta";
-      roomCode: string;
-      delta: GameDelta;
+      requestId: string;
+      payload: Readonly<{ roomCode: string; delta: GameDelta }>;
     }>
   | Readonly<{
       version: typeof REALTIME_PROTOCOL_VERSION;
       type: "rejected";
-      reason:
-        | "invalid_message"
-        | "not_a_player"
-        | "invalid_identity"
-        | "reconnect_window_expired"
-        | "game_completed"
-        | "input_rate_limited";
+      requestId: string;
+      payload: Readonly<{
+        reason:
+          | "invalid_message"
+          | "not_a_player"
+          | "invalid_identity"
+          | "reconnect_window_expired"
+          | "game_completed"
+          | "input_rate_limited";
+      }>;
     }>
   | Readonly<{
       version: typeof REALTIME_PROTOCOL_VERSION;
       type: "pong";
+      requestId: string;
+      payload: Readonly<Record<string, never>>;
     }>;
 
 export const RECONNECT_WINDOW_MS = 60_000;
@@ -96,6 +101,8 @@ export type RealtimeRuntimeOptions = Readonly<{
   now?: () => number;
   metrics?: OperationsMetrics;
   results?: GameResultWriter;
+  /** Lets the process owner make completed and aborted Results durable. */
+  recordResult?: (result: NewGameResult) => Promise<unknown>;
 }>;
 
 /** The sole real-time owner for Room countdowns and authoritative Games. */
@@ -108,16 +115,24 @@ export class RealtimeRuntime {
   private readonly games = new Map<string, AuthoritativeRoom>();
   private readonly createSeed: () => number;
   private readonly now: () => number;
+  private readonly recordResult:
+    ((result: NewGameResult) => Promise<unknown>) | undefined;
   private timer: NodeJS.Timeout | undefined;
   private nextTickAtMs: number | undefined;
   private heartbeatTimer: NodeJS.Timeout | undefined;
   private readonly heartbeatAlive = new Map<WebSocket, boolean>();
   private attached = false;
+  private closed = false;
 
   public constructor(private readonly options: RealtimeRuntimeOptions) {
     this.rooms = options.rooms ?? new RoomDirectory();
     this.createSeed = options.createSeed ?? defaultSeed;
     this.now = options.now ?? Date.now;
+    this.recordResult =
+      options.recordResult ??
+      (options.results === undefined
+        ? undefined
+        : (result) => options.results!.record(result));
   }
 
   /** Binds the WebSocket endpoint to the existing HTTP server. */
@@ -149,7 +164,7 @@ export class RealtimeRuntime {
             pending.playerIds,
             this.createSeed(),
             this.now,
-            this.options.results,
+            this.recordResult,
           ),
         );
       }
@@ -158,6 +173,8 @@ export class RealtimeRuntime {
   }
 
   public async close(): Promise<void> {
+    if (this.closed) return;
+    this.closed = true;
     if (this.timer !== undefined) clearInterval(this.timer);
     this.timer = undefined;
     this.nextTickAtMs = undefined;
@@ -217,7 +234,15 @@ export class RealtimeRuntime {
             this.options.metrics?.connectionClosed(),
           );
           this.monitorHeartbeat(connection);
-          game.connect(connection, account.id, { stateVersion });
+          game.connect(connection, account.id, { stateVersion }, () =>
+            authenticateLoginSession(
+              this.options.authentication,
+              request.headers.cookie,
+            ).then((renewed) => {
+              if (renewed?.id !== account.id)
+                throw new Error("Login Session is no longer valid");
+            }),
+          );
         },
       );
     } catch {
@@ -269,16 +294,23 @@ export class AuthoritativeRoom {
   private readonly disconnectedAtMs = new Map<string, number>();
   private readonly inputTimes = new Map<string, number[]>();
   private readonly engine: GameEngine;
-  private resultRecorded = false;
+  private pendingResult: NewGameResult | undefined;
+  private resultPersistence: Promise<void> | undefined;
+  private resultPersistenceError: unknown;
 
   public constructor(
     private readonly roomCode: string,
     playerIds: readonly string[],
     private readonly seed: number,
     private readonly now: () => number = Date.now,
-    private readonly results?: GameResultWriter,
+    private readonly recordResult?: (result: NewGameResult) => Promise<unknown>,
   ) {
     this.engine = new GameEngine({ players: playerIds, seed });
+  }
+
+  /** Last failed durable Result write; cleared after a successful retry. */
+  public get lastResultPersistenceError(): unknown {
+    return this.resultPersistenceError;
   }
 
   public tick(): void {
@@ -288,8 +320,8 @@ export class AuthoritativeRoom {
     this.broadcast({
       version: REALTIME_PROTOCOL_VERSION,
       type: "delta",
-      roomCode: this.roomCode,
-      delta,
+      requestId: createRequestId(),
+      payload: { roomCode: this.roomCode, delta },
     });
   }
 
@@ -301,6 +333,7 @@ export class AuthoritativeRoom {
     connection: RealtimeSocket,
     playerId: string,
     options: ReconnectOptions = {},
+    onValidActivity?: () => void | Promise<void>,
   ): ReconnectOutcome {
     if (
       !this.engine.snapshot().players.some((player) => player.id === playerId)
@@ -321,7 +354,7 @@ export class AuthoritativeRoom {
     this.disconnectedAtMs.delete(playerId);
     this.sendSnapshot(connection);
     connection.on("message", (data, isBinary) => {
-      this.handleMessage(connection, playerId, data, isBinary);
+      this.handleMessage(connection, playerId, data, isBinary, onValidActivity);
     });
     connection.on("close", () => {
       this.connections.delete(connection);
@@ -338,8 +371,8 @@ export class AuthoritativeRoom {
   public async close(): Promise<void> {
     for (const connection of this.connections.keys()) connection.close();
     this.connections.clear();
-    if (this.engine.snapshot().phase === "running")
-      await this.recordAbortedResult();
+    if (this.engine.snapshot().phase === "running") this.recordAbortedResult();
+    await this.persistPendingResult();
   }
 
   private handleMessage(
@@ -347,6 +380,7 @@ export class AuthoritativeRoom {
     playerId: string,
     data: RawData,
     isBinary: boolean,
+    onValidActivity?: () => void | Promise<void>,
   ): void {
     if (this.connections.get(connection) !== playerId) return;
     const message = parseRealtimeMessage(data, isBinary);
@@ -354,44 +388,55 @@ export class AuthoritativeRoom {
       this.send(connection, {
         version: REALTIME_PROTOCOL_VERSION,
         type: "rejected",
-        reason: "invalid_message",
+        requestId: parseRequestId(data, isBinary) ?? createRequestId(),
+        payload: { reason: "invalid_message" },
       });
       return;
     }
     if (message.type === "resync") {
-      this.sendSnapshot(connection);
+      this.sendSnapshot(connection, message.requestId);
       return;
     }
     if (message.type === "ping") {
       this.send(connection, {
         version: REALTIME_PROTOCOL_VERSION,
         type: "pong",
+        requestId: message.requestId,
+        payload: {},
       });
+      this.renewSession(connection, onValidActivity);
       return;
     }
     if (!this.allowInput(playerId)) {
       this.send(connection, {
         version: REALTIME_PROTOCOL_VERSION,
         type: "rejected",
-        reason: "input_rate_limited",
+        requestId: message.requestId,
+        payload: { reason: "input_rate_limited" },
       });
       return;
     }
-    if (!this.engine.submit(playerId, message.input)) {
+    if (!this.engine.submit(playerId, message.payload)) {
       this.send(connection, {
         version: REALTIME_PROTOCOL_VERSION,
         type: "rejected",
-        reason: "not_a_player",
+        requestId: message.requestId,
+        payload: { reason: "not_a_player" },
       });
+      return;
     }
+    this.renewSession(connection, onValidActivity);
   }
 
-  private sendSnapshot(connection: RealtimeSocket): void {
+  private sendSnapshot(
+    connection: RealtimeSocket,
+    requestId: string = createRequestId(),
+  ): void {
     this.send(connection, {
       version: REALTIME_PROTOCOL_VERSION,
       type: "snapshot",
-      roomCode: this.roomCode,
-      snapshot: this.engine.snapshot(),
+      requestId,
+      payload: { roomCode: this.roomCode, snapshot: this.engine.snapshot() },
     });
   }
 
@@ -412,7 +457,8 @@ export class AuthoritativeRoom {
     this.send(connection, {
       version: REALTIME_PROTOCOL_VERSION,
       type: "rejected",
-      reason,
+      requestId: createRequestId(),
+      payload: { reason },
     });
     connection.close();
     return { type: reason };
@@ -432,11 +478,10 @@ export class AuthoritativeRoom {
   private recordCompletedResult(
     outcome: NonNullable<GameSnapshot["outcome"]>,
   ): void {
-    if (this.resultRecorded || this.results === undefined) return;
-    this.resultRecorded = true;
-    const snapshot = this.engine.snapshot();
-    void this.results
-      .record({
+    if (this.recordResult === undefined) return;
+    if (this.pendingResult === undefined) {
+      const snapshot = this.engine.snapshot();
+      this.pendingResult = {
         status: "completed",
         roomCode: this.roomCode,
         gameSeed: this.seed,
@@ -453,26 +498,54 @@ export class AuthoritativeRoom {
                 ? "won"
                 : "lost",
         })),
-      })
-      .catch(() => undefined);
+      };
+    }
+    void this.persistPendingResult().catch((error: unknown) => {
+      this.resultPersistenceError = error;
+    });
   }
 
-  private async recordAbortedResult(): Promise<void> {
-    if (this.resultRecorded || this.results === undefined) return;
-    this.resultRecorded = true;
+  private recordAbortedResult(): void {
+    if (this.pendingResult !== undefined || this.recordResult === undefined)
+      return;
     const snapshot = this.engine.snapshot();
-    await this.results.record({
+    this.pendingResult = {
       status: "aborted",
       roomCode: this.roomCode,
       gameSeed: this.seed,
       mapVersion: `arena-v${snapshot.map.version}`,
       durationMs: snapshot.elapsedMs,
+      abortReason: "runtime_shutdown",
       participants: snapshot.players.map((player) => ({
         accountId: player.id,
         kills: 0,
         outcome: "aborted",
       })),
-    });
+    };
+  }
+
+  private persistPendingResult(): Promise<void> {
+    if (this.pendingResult === undefined || this.recordResult === undefined)
+      return Promise.resolve();
+    if (this.resultPersistence !== undefined) return this.resultPersistence;
+    const pending = this.pendingResult;
+    this.resultPersistence = this.recordResult(pending)
+      .then(() => {
+        if (this.pendingResult === pending) this.pendingResult = undefined;
+        this.resultPersistenceError = undefined;
+      })
+      .finally(() => {
+        this.resultPersistence = undefined;
+      });
+    return this.resultPersistence;
+  }
+
+  private renewSession(
+    connection: RealtimeSocket,
+    onValidActivity: (() => void | Promise<void>) | undefined,
+  ): void {
+    if (onValidActivity === undefined) return;
+    void Promise.resolve(onValidActivity()).catch(() => connection.close());
   }
 }
 
@@ -487,19 +560,49 @@ function parseRealtimeMessage(
   } catch {
     return undefined;
   }
-  if (!isRecord(value) || value.version !== REALTIME_PROTOCOL_VERSION)
-    return undefined;
-  if (value.type === "resync" && hasOnlyKeys(value, ["version", "type"]))
-    return { type: "resync" };
-  if (value.type === "ping" && hasOnlyKeys(value, ["version", "type"]))
-    return { type: "ping" };
   if (
-    value.type !== "input" ||
-    !hasOnlyKeys(value, ["version", "type", "input"])
+    !isRecord(value) ||
+    value.version !== REALTIME_PROTOCOL_VERSION ||
+    !isRequestId(value.requestId)
   )
     return undefined;
-  const input = parseGameInput(value.input);
-  return input === undefined ? undefined : { type: "input", input };
+  if (
+    value.type === "resync" &&
+    hasOnlyKeys(value, ["version", "type", "requestId", "payload"]) &&
+    isEmptyRecord(value.payload)
+  )
+    return { type: "resync", requestId: value.requestId };
+  if (
+    value.type === "ping" &&
+    hasOnlyKeys(value, ["version", "type", "requestId", "payload"]) &&
+    isEmptyRecord(value.payload)
+  )
+    return { type: "ping", requestId: value.requestId };
+  if (
+    value.type !== "input" ||
+    !hasOnlyKeys(value, ["version", "type", "requestId", "payload"])
+  )
+    return undefined;
+  const input = parseGameInput(value.payload);
+  return input === undefined
+    ? undefined
+    : { type: "input", requestId: value.requestId, payload: input };
+}
+
+function parseRequestId(data: RawData, isBinary: boolean): string | null {
+  if (isBinary) return null;
+  try {
+    const value = JSON.parse(rawDataToString(data));
+    return isRecord(value) && isRequestId(value.requestId)
+      ? value.requestId
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function isRequestId(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 && value.length <= 128;
 }
 
 function parseGameInput(value: unknown): GameInput | undefined {
@@ -534,6 +637,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isEmptyRecord(value: unknown): value is Record<string, never> {
+  return isRecord(value) && Object.keys(value).length === 0;
+}
+
 function hasOnlyKeys(
   value: Record<string, unknown>,
   keys: readonly string[],
@@ -549,6 +656,10 @@ function rejectUpgrade(socket: Duplex, status: number, error: string): void {
   socket.end(
     `HTTP/1.1 ${status} ${error}\r\nConnection: close\r\nContent-Type: application/json\r\n\r\n${JSON.stringify({ error })}`,
   );
+}
+
+function createRequestId(): string {
+  return randomBytes(12).toString("base64url");
 }
 
 function defaultSeed(): number {

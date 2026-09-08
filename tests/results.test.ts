@@ -22,6 +22,7 @@ test("maps detailed Game Results and authorizes only participating Accounts", ()
     endedAt: new Date("2026-09-07T00:00:00.000Z"),
     outcomeKind: "WINNER",
     endReason: "ELIMINATION",
+    abortReason: null,
     participants: [
       {
         accountId: "account-a",
@@ -76,6 +77,7 @@ test("records completed and aborted Results atomically with their participants",
                   endedAt: new Date("2026-09-07T00:00:00.000Z"),
                   outcomeKind: "WINNER",
                   endReason: "ELIMINATION",
+                  abortReason: null,
                   participants: [
                     {
                       accountId: "account-a",
@@ -101,6 +103,7 @@ test("records completed and aborted Results atomically with their participants",
                   endedAt: new Date("2026-09-07T00:00:01.000Z"),
                   outcomeKind: null,
                   endReason: "ABORTED",
+                  abortReason: "deployment",
                   participants: [
                     {
                       accountId: "account-a",
@@ -140,6 +143,7 @@ test("records completed and aborted Results atomically with their participants",
     gameSeed: 43,
     mapVersion: "arena-v1",
     durationMs: 500,
+    abortReason: "deployment",
     participants: [
       { accountId: "account-a", outcome: "aborted", kills: 0 },
       { accountId: "account-c", outcome: "aborted", kills: 0 },
@@ -150,7 +154,7 @@ test("records completed and aborted Results atomically with their participants",
     kind: "winner",
     reason: "elimination",
   });
-  assert.deepEqual(aborted.outcome, { kind: "aborted" });
+  assert.deepEqual(aborted.outcome, { kind: "aborted", reason: "deployment" });
   assert.deepEqual(writes, [
     {
       status: "COMPLETED",
@@ -160,6 +164,7 @@ test("records completed and aborted Results atomically with their participants",
       durationMs: 120_000,
       outcomeKind: "WINNER",
       endReason: "ELIMINATION",
+      abortReason: null,
       participants: {
         create: [
           { accountId: "account-a", outcome: "WON", kills: 2 },
@@ -175,6 +180,7 @@ test("records completed and aborted Results atomically with their participants",
       durationMs: 500,
       outcomeKind: null,
       endReason: "ABORTED",
+      abortReason: "deployment",
       participants: {
         create: [
           { accountId: "account-a", outcome: "ABORTED", kills: 0 },
@@ -183,6 +189,39 @@ test("records completed and aborted Results atomically with their participants",
       },
     },
   ]);
+});
+
+test("requires bounded abort diagnostics and exposes persistence failures", async () => {
+  const writer = new GameResultWriter({
+    $transaction: async () => {
+      throw new Error("database unavailable");
+    },
+  } as unknown as PrismaClient);
+  const aborted = {
+    status: "aborted" as const,
+    roomCode: "RESULT",
+    gameSeed: 43,
+    mapVersion: "arena-v1",
+    durationMs: 500,
+    abortReason: "x".repeat(201),
+    participants: [
+      { accountId: "account-a", outcome: "aborted" as const, kills: 0 },
+      { accountId: "account-b", outcome: "aborted" as const, kills: 0 },
+    ],
+  };
+
+  await assert.rejects(writer.record(aborted), /at most 200 characters/);
+  await assert.rejects(
+    writer.record({ ...aborted, abortReason: "   " }),
+    /must be non-empty/,
+  );
+  await assert.rejects(
+    writer.record({
+      ...aborted,
+      abortReason: "deployment",
+    }),
+    /database unavailable/,
+  );
 });
 
 test("scopes detailed queries to participants and exposes completed aggregate evidence only", async () => {
@@ -265,6 +304,7 @@ test("scopes detailed queries to participants and exposes completed aggregate ev
         endedAt: true,
         outcomeKind: true,
         endReason: true,
+        abortReason: true,
         participants: {
           orderBy: { accountId: "asc" },
           select: {
@@ -355,12 +395,22 @@ test("Game Result persistence and aggregate queries use real MySQL when availabl
       gameSeed: 43,
       mapVersion: "arena-v1",
       durationMs: 500,
+      abortReason: "test_abort",
       participants: [
         { accountId: winner.id, outcome: "aborted", kills: 0 },
         { accountId: outsider.id, outcome: "aborted", kills: 0 },
       ],
     });
     resultIds.push(aborted.id);
+
+    const abortedDetail = await queries.getDetailedForAccount(
+      winner.id,
+      aborted.id,
+    );
+    assert.deepEqual(abortedDetail?.outcome, {
+      kind: "aborted",
+      reason: "test_abort",
+    });
 
     const participantDetail = await queries.getDetailedForAccount(
       winner.id,

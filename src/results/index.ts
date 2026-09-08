@@ -28,6 +28,8 @@ export type CompletedGameResultInput = GameResultMetadata &
 export type AbortedGameResultInput = GameResultMetadata &
   Readonly<{
     status: "aborted";
+    /** Bounded operational diagnostic for the interrupted Game. */
+    abortReason: string;
     participants: readonly ResultParticipantInput[];
   }>;
 
@@ -46,7 +48,7 @@ export type DetailedGameResult = Readonly<{
         kind: "winner" | "draw";
         reason: "elimination" | "timeout";
       }>
-    | Readonly<{ kind: "aborted" }>;
+    | Readonly<{ kind: "aborted"; reason: string }>;
   participants: readonly Readonly<{
     accountId: string;
     username: string;
@@ -81,6 +83,7 @@ type PersistedResult = Readonly<{
   endedAt: Date;
   outcomeKind: "WINNER" | "DRAW" | null;
   endReason: "ELIMINATION" | "TIMEOUT" | "ABORTED";
+  abortReason: string | null;
   participants: readonly Readonly<{
     accountId: string;
     username: string;
@@ -117,6 +120,7 @@ export class GameResultWriter {
                 ? "ELIMINATION"
                 : "TIMEOUT"
               : "ABORTED",
+          abortReason: input.status === "aborted" ? input.abortReason : null,
           participants: {
             create: input.participants.map((participant) => ({
               accountId: participant.accountId,
@@ -209,7 +213,7 @@ export function toDetailedGameResult(
 ): DetailedGameResult {
   const outcome =
     result.status === "ABORTED"
-      ? { kind: "aborted" as const }
+      ? { kind: "aborted" as const, reason: toAbortReason(result.abortReason) }
       : {
           kind: toCompletedOutcomeKind(result.outcomeKind),
           reason: toCompletedReason(result.endReason),
@@ -258,6 +262,7 @@ function fromPrismaDetailedResult(result: {
   endedAt: Date;
   outcomeKind: "WINNER" | "DRAW" | null;
   endReason: "ELIMINATION" | "TIMEOUT" | "ABORTED";
+  abortReason: string | null;
   participants: readonly {
     accountId: string;
     outcome: "WON" | "LOST" | "DRAW" | "ABORTED";
@@ -316,6 +321,14 @@ function validateNewResult(input: NewGameResult): void {
 
   if (input.status === "aborted") {
     if (
+      input.abortReason.trim().length === 0 ||
+      input.abortReason.length > MAX_ABORT_REASON_LENGTH
+    ) {
+      throw new Error(
+        `Aborted Game Result reason must be non-empty and contain at most ${MAX_ABORT_REASON_LENGTH} characters`,
+      );
+    }
+    if (
       input.participants.some(
         (participant) => participant.outcome !== "aborted",
       )
@@ -362,6 +375,14 @@ function toCompletedReason(
   if (reason === "TIMEOUT") return "timeout";
   throw new Error("Completed Game Result cannot have an aborted reason");
 }
+
+function toAbortReason(reason: string | null): string {
+  if (!reason)
+    throw new Error("Aborted Game Result is missing an abort diagnostic");
+  return reason;
+}
+
+export const MAX_ABORT_REASON_LENGTH = 200;
 
 const detailedResultSelection = {
   id: true,

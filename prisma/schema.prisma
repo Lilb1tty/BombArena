@@ -50,6 +50,8 @@ model GameResult {
   durationMs  Int                   @db.UnsignedInt
   outcomeKind GameResultOutcomeKind?
   endReason   GameResultEndReason
+  /// A bounded diagnostic retained only for aborted Games.
+  abortReason String?               @db.VarChar(200)
   endedAt     DateTime              @default(now())
   participants GameResultParticipant[]
 

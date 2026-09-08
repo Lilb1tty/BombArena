@@ -48,10 +48,20 @@ server.listen(port, () => {
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.once(signal, () => {
-    server.close(() => {
-      void realtime
-        .close()
-        .finally(() => authentication.close().finally(() => process.exit(0)));
+    void shutdown();
+  });
+}
+
+async function shutdown(): Promise<void> {
+  try {
+    // Upgraded WebSockets can keep server.close() pending, so finalise Games first.
+    await realtime.close();
+  } catch (error) {
+    log("error", "realtime_shutdown_failed", {
+      error: error instanceof Error ? error.message : String(error),
     });
+  }
+  server.close(() => {
+    void authentication.close().finally(() => process.exit(0));
   });
 }

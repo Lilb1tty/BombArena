@@ -73,26 +73,38 @@ test("Room HTTP actions and real-time Game snapshots use an authenticated bounda
       const snapshot = await nextMessage(socket);
       assert.equal(snapshot.type, "snapshot");
       assert.equal(snapshot.version, 1);
-      assert.equal(snapshot.snapshot.map.version, 1);
+      assert.equal(typeof snapshot.requestId, "string");
+      assert.equal(snapshot.payload.snapshot.map.version, 1);
 
       socket.send(
         JSON.stringify({
           version: 1,
           type: "input",
-          input: { type: "move", direction: "right", x: 99 },
+          requestId: "invalid-input",
+          payload: { type: "move", direction: "right", x: 99 },
         }),
       );
       assert.deepEqual(await nextMessage(socket), {
         version: 1,
         type: "rejected",
-        reason: "invalid_message",
+        requestId: "invalid-input",
+        payload: { reason: "invalid_message" },
       });
 
-      socket.send(JSON.stringify({ version: 1, type: "resync" }));
+      socket.send(
+        JSON.stringify({
+          version: 1,
+          type: "resync",
+          requestId: "resync-1",
+          payload: {},
+        }),
+      );
       const resync = await nextMessage(socket);
       assert.equal(resync.type, "snapshot");
+      assert.equal(resync.requestId, "resync-1");
       assert.equal(
-        resync.snapshot.stateVersion >= snapshot.snapshot.stateVersion,
+        resync.payload.snapshot.stateVersion >=
+          snapshot.payload.snapshot.stateVersion,
         true,
       );
     } finally {

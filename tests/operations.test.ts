@@ -57,13 +57,13 @@ test("health probes make readiness failures observable without an HTTP framework
   assert.deepEqual(await probes.ready(), { ok: false, status: "unavailable" });
 });
 
-test("abort coordinator records each active Game and continues after a failure", async () => {
-  const recorded: string[] = [];
+test("abort coordinator carries diagnostic reasons and continues after a failure", async () => {
+  const recorded: { gameId: string; reason: string }[] = [];
   const logs: OperationalLogEntry[] = [];
   const coordinator = new GameAbortCoordinator(
-    async ({ gameId }) => {
+    async ({ gameId, reason }) => {
       if (gameId === "game-fail") throw new Error("database unavailable");
-      recorded.push(gameId);
+      recorded.push({ gameId, reason });
     },
     (entry) => logs.push(entry),
   );
@@ -77,7 +77,10 @@ test("abort coordinator records each active Game and continues after a failure",
     { gameId: "game-2", reason: "previous_process_lost" },
   ]);
 
-  assert.deepEqual(recorded, ["game-1", "game-2"]);
+  assert.deepEqual(recorded, [
+    { gameId: "game-1", reason: "deployment" },
+    { gameId: "game-2", reason: "previous_process_lost" },
+  ]);
   assert.deepEqual(shutdown, {
     recordedGameIds: ["game-1"],
     failedGameIds: ["game-fail"],

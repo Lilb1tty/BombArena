@@ -30,20 +30,21 @@ test("a same-account reconnect receives a fresh snapshot before later deltas", (
   first.clientMessage({
     version: 1,
     type: "input",
-    input: { type: "move", direction: "right" },
+    requestId: "move-after-close",
+    payload: { type: "move", direction: "right" },
   });
   room.tick();
 
   const reconnected = new FakeSocket();
   assert.deepEqual(
     room.connect(reconnected, "first", {
-      stateVersion: initial.snapshot.stateVersion,
+      stateVersion: initial.payload.snapshot.stateVersion,
     }),
     { type: "state_version_gap", reconnected: true },
   );
   const snapshot = reconnected.message(0);
   assert.equal(snapshot.type, "snapshot");
-  assert.equal(snapshot.snapshot.stateVersion, 1);
+  assert.equal(snapshot.payload.snapshot.stateVersion, 1);
   assert.deepEqual(
     player(snapshot, "first").cell,
     player(initial, "first").cell,
@@ -67,11 +68,9 @@ test("reconnect exposes identity, expiry, and completed-game outcomes", () => {
   assert.deepEqual(room.connect(unknown, "other"), {
     type: "invalid_identity",
   });
-  assert.deepEqual(unknown.message(0), {
-    version: 1,
-    type: "rejected",
-    reason: "invalid_identity",
-  });
+  assert.equal(unknown.message(0).type, "rejected");
+  assert.equal(typeof unknown.message(0).requestId, "string");
+  assert.deepEqual(unknown.message(0).payload, { reason: "invalid_identity" });
 
   const first = new FakeSocket();
   room.connect(first, "first");
@@ -88,7 +87,8 @@ test("reconnect exposes identity, expiry, and completed-game outcomes", () => {
   player.clientMessage({
     version: 1,
     type: "input",
-    input: { type: "placeBomb" },
+    requestId: "place-bomb",
+    payload: { type: "placeBomb" },
   });
   for (let tick = 0; tick < 40; tick += 1) completed.tick();
 
@@ -96,33 +96,88 @@ test("reconnect exposes identity, expiry, and completed-game outcomes", () => {
   assert.deepEqual(completed.connect(afterGame, "second"), {
     type: "game_completed",
   });
-  assert.deepEqual(afterGame.message(0), {
-    version: 1,
-    type: "rejected",
-    reason: "game_completed",
-  });
+  assert.equal(afterGame.message(0).type, "rejected");
+  assert.equal(typeof afterGame.message(0).requestId, "string");
+  assert.deepEqual(afterGame.message(0).payload, { reason: "game_completed" });
 });
 
-test("application ping is explicit and excessive Game Inputs are rejected", () => {
+test("application ping and accepted Game Inputs renew the Login Session", () => {
+  const room = new AuthoritativeRoom("LIMIT", ["first", "second"], 10, () => 0);
+  const socket = new FakeSocket();
+  let renewed = 0;
+  room.connect(socket, "first", {}, () => {
+    renewed += 1;
+  });
+
+  socket.clientMessage({
+    version: 1,
+    type: "ping",
+    requestId: "ping-1",
+    payload: {},
+  });
+  assert.deepEqual(socket.message(1), {
+    version: 1,
+    type: "pong",
+    requestId: "ping-1",
+    payload: {},
+  });
+
+  socket.clientMessage({
+    version: 1,
+    type: "input",
+    requestId: "move-1",
+    payload: { type: "move", direction: "right" },
+  });
+  assert.equal(renewed, 2);
+});
+
+test("excessive Game Inputs are rejected with their request ID", () => {
   const room = new AuthoritativeRoom("LIMIT", ["first", "second"], 10, () => 0);
   const socket = new FakeSocket();
   room.connect(socket, "first");
-
-  socket.clientMessage({ version: 1, type: "ping" });
-  assert.deepEqual(socket.message(1), { version: 1, type: "pong" });
 
   for (let index = 0; index < 21; index += 1)
     socket.clientMessage({
       version: 1,
       type: "input",
-      input: { type: "move", direction: "right" },
+      requestId: `move-${index}`,
+      payload: { type: "move", direction: "right" },
     });
 
-  assert.deepEqual(socket.message(2), {
+  assert.deepEqual(socket.message(1), {
     version: 1,
     type: "rejected",
-    reason: "input_rate_limited",
+    requestId: "move-20",
+    payload: { reason: "input_rate_limited" },
   });
+});
+
+test("a failed completed Result remains pending until it is recorded", async () => {
+  let attempts = 0;
+  const room = new AuthoritativeRoom(
+    "RESULT",
+    ["first", "second"],
+    9,
+    Date.now,
+    async () => {
+      attempts += 1;
+      if (attempts === 1) throw new Error("database unavailable");
+    },
+  );
+  const player = new FakeSocket();
+  room.connect(player, "first");
+  player.clientMessage({
+    version: 1,
+    type: "input",
+    requestId: "place-bomb",
+    payload: { type: "placeBomb" },
+  });
+  for (let tick = 0; tick < 40; tick += 1) room.tick();
+
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(attempts, 1);
+  await room.close();
+  assert.equal(attempts, 2);
 });
 
 class FakeSocket implements RealtimeSocket {
@@ -173,7 +228,7 @@ class FakeSocket implements RealtimeSocket {
 }
 
 function player(snapshotMessage: any, playerId: string): any {
-  return snapshotMessage.snapshot.players.find(
+  return snapshotMessage.payload.snapshot.players.find(
     (player: any) => player.id === playerId,
   );
 }
