@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                     String   @id @default(cuid()) @db.VarChar(30)
+  username               String   @unique(map: "Account_username_key") @db.VarChar(20)
+  passwordCredentialHash String   @db.VarChar(255)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  gameResultParticipants GameResultParticipant[]
+
+  @@map("Account")
+}
+
+enum GameResultStatus {
+  COMPLETED
+  ABORTED
+}
+
+enum GameResultOutcomeKind {
+  WINNER
+  DRAW
+}
+
+enum GameResultEndReason {
+  ELIMINATION
+  TIMEOUT
+  ABORTED
+}
+
+enum GameResultParticipantOutcome {
+  WON
+  LOST
+  DRAW
+  ABORTED
+}
+
+model GameResult {
+  id          String                @id @default(cuid()) @db.VarChar(30)
+  status      GameResultStatus
+  roomCode    String                @db.VarChar(6)
+  gameSeed    Int                   @db.UnsignedInt
+  mapVersion  String                @db.VarChar(32)
+  durationMs  Int                   @db.UnsignedInt
+  outcomeKind GameResultOutcomeKind?
+  endReason   GameResultEndReason
+  endedAt     DateTime              @default(now())
+  participants GameResultParticipant[]
+
+  @@index([status, endedAt])
+  @@map("GameResult")
+}
+
+model GameResultParticipant {
+  gameResultId String                       @db.VarChar(30)
+  accountId    String                       @db.VarChar(30)
+  outcome      GameResultParticipantOutcome
+  kills        Int                          @default(0) @db.UnsignedInt
+
+  gameResult GameResult @relation(fields: [gameResultId], references: [id], onDelete: Cascade)
+  account    Account    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@id([gameResultId, accountId])
+  @@index([accountId, gameResultId])
+  @@map("GameResultParticipant")
+}

@@ -1,0 +1,1 @@
+-- Establishes Prisma's migration history before domain tables are introduced.
