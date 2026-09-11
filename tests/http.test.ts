@@ -48,13 +48,33 @@ test("readiness endpoint reports the service can accept requests", async () => {
   });
 });
 
-test("root serves the Pixel Arena demonstration page", async () => {
+test("root serves the BombArena demonstration page", async () => {
   await withApp(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/`);
     const page = await response.text();
 
     assert.equal(response.status, 200);
     assert.match(response.headers.get("content-type") ?? "", /text\/html/);
-    assert.match(page, /Pixel Arena/);
+    assert.match(page, /BombArena/);
+    assert.match(page, /assets\/vendor\/gsap\.min\.js/);
+    assert.match(page, /assets\/arena-hero-pixel\.png/);
+  });
+});
+
+test("the production interface serves its pixel arena artwork", async () => {
+  await withApp(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/assets/arena-hero-pixel.png`);
+
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("content-type") ?? "", /image\/png/);
+  });
+});
+
+test("the production interface serves its motion runtime locally", async () => {
+  await withApp(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/assets/vendor/gsap.min.js`);
+
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("content-type") ?? "", /javascript/);
   });
 });

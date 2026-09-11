@@ -1,8 +1,8 @@
 {
-  "name": "pixel-arena",
+  "name": "bombarena",
   "version": "0.1.0",
   "private": true,
-  "description": "Pixel Arena real-time multiplayer arena-game service",
+  "description": "BombArena real-time multiplayer arena-game service",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -11,7 +11,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "db:migrate": "prisma migrate deploy",
-    "start": "node dist/server.js",
+    "start": "npm run build && node dist/server.js",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "typecheck": "tsc --noEmit",
@@ -21,6 +21,7 @@
     "@prisma/client": "^6.19.3",
     "argon2": "^0.44.0",
     "express": "^5.1.0",
+    "gsap": "^3.13.0",
     "prisma": "^6.19.0",
     "redis": "^5.12.1",
     "ws": "^8.21.3"

@@ -40,7 +40,7 @@ test("rejects invalid, duplicate, full, and started Room joins", () => {
       error instanceof RoomError && error.code === "invalid_room_code",
   );
   assert.throws(
-    () => rooms.join("MISSING", "two"),
+    () => rooms.join("MISSNG", "two"),
     (error: unknown) =>
       error instanceof RoomError && error.code === "room_not_found",
   );
@@ -66,6 +66,8 @@ test("ready, unready, and leaving recompute the countdown", () => {
     createRoomCode: () => "ARENA3",
   }).create("one");
   room.join("two");
+  room.selectCharacter("one", "spark");
+  room.selectCharacter("two", "volt");
   room.setReady("one", true);
   room.setReady("two", true);
   const countdown = room.snapshot();
@@ -80,6 +82,8 @@ test("ready, unready, and leaving recompute the countdown", () => {
 
   room.join("two");
   room.join("three");
+  room.selectCharacter("two", "volt");
+  room.selectCharacter("three", "moss");
   room.setReady("two", true);
   room.setReady("three", true);
   time.advance(1_000);
@@ -97,6 +101,8 @@ test("the eligible countdown locks the Room and exposes a pending Game start", (
     createRoomCode: () => "ARENA4",
   }).create("one");
   room.join("two");
+  room.selectCharacter("one", "spark");
+  room.selectCharacter("two", "volt");
   room.setReady("one", true);
   room.setReady("two", true);
   time.advance(ROOM_COUNTDOWN_MS - 1);
@@ -108,8 +114,8 @@ test("the eligible countdown locks the Room and exposes a pending Game start", (
     creatorId: "one",
     phase: "started",
     players: [
-      { id: "one", ready: true },
-      { id: "two", ready: true },
+      { id: "one", ready: true, character: "spark" },
+      { id: "two", ready: true, character: "volt" },
     ],
     pendingGameStart: { roomCode: "ARENA4", playerIds: ["one", "two"] },
   });
@@ -123,4 +129,24 @@ test("the eligible countdown locks the Room and exposes a pending Game start", (
     (error: unknown) =>
       error instanceof RoomError && error.code === "room_started",
   );
+});
+
+test("each Player must claim an available character before readying", () => {
+  const room = new RoomDirectory({ createRoomCode: () => "ARENA5" }).create(
+    "one",
+  );
+  room.join("two");
+  assert.throws(
+    () => room.setReady("one", true),
+    (error: unknown) =>
+      error instanceof RoomError && error.code === "character_required",
+  );
+  room.selectCharacter("one", "spark");
+  assert.throws(
+    () => room.selectCharacter("two", "spark"),
+    (error: unknown) =>
+      error instanceof RoomError && error.code === "character_taken",
+  );
+  room.selectCharacter("two", "volt");
+  assert.equal(room.snapshot().players[1].character, "volt");
 });

@@ -1,6 +1,6 @@
-# Pixel Arena
+# BombArena
 
-Pixel Arena is an authoritative real-time multiplayer arena-game service. It
+BombArena is an authoritative real-time multiplayer arena-game service. It
 includes Account sessions, Rooms, deterministic Games, restricted Game Results,
 and a small browser demonstration client.
 

@@ -87,12 +87,12 @@ export function createApp(
   }
 
   if (options.authentication !== undefined && options.rooms !== undefined) {
-    const [create, join, ready, unready, leave] = roomRoutes(
-      options.authentication,
-      options.rooms,
-    );
+    const [get, create, join, selectCharacter, ready, unready, leave] =
+      roomRoutes(options.authentication, options.rooms);
+    app.get("/rooms/:roomCode", get);
     app.post("/rooms", create);
     app.post("/rooms/:roomCode/join", join);
+    app.put("/rooms/:roomCode/character", selectCharacter);
     app.post("/rooms/:roomCode/ready", ready);
     app.post("/rooms/:roomCode/unready", unready);
     app.post("/rooms/:roomCode/leave", leave);
@@ -107,6 +107,10 @@ export function createApp(
     app.get("/public/game-results", aggregates);
   }
 
+  app.use(
+    "/assets/vendor",
+    express.static(path.resolve(moduleDirectory, "../node_modules/gsap/dist")),
+  );
   app.use(express.static(staticDirectory));
 
   return app;

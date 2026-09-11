@@ -1,6 +1,6 @@
-# Pixel Arena
+# BombArena
 
-Pixel Arena is a real-time multiplayer arena-game service. Its game rules are resolved by the server and surfaced to connected players.
+BombArena is a real-time multiplayer arena-game service. Its game rules are resolved by the server and surfaced to connected players.
 
 ## Language
 
@@ -9,7 +9,7 @@ A human participant represented inside one game room, linked to an Account for i
 _Avoid_: user, client, account
 
 **Account**:
-The registered identity that authenticates a person to Pixel Arena through a globally unique, case-insensitive public username.
+The registered identity that authenticates a person to BombArena through a globally unique, case-insensitive public username.
 _Avoid_: player, user session
 
 **Password Credential**:

@@ -47,9 +47,23 @@ test("Room HTTP actions and real-time Game snapshots use an authenticated bounda
     assert.equal(created.response.status, 201);
     const roomCode = created.body.room.code;
 
+    const roomRead = await fetch(`${baseUrl}/rooms/${roomCode}`, {
+      headers: { Cookie: first.cookie },
+    });
+    assert.equal(roomRead.status, 200);
+    assert.equal((await roomRead.json()).room.code, roomCode);
+
     assert.equal(
       (await post(baseUrl, `/rooms/${roomCode}/join`, second.cookie)).response
         .status,
+      200,
+    );
+    assert.equal(
+      (await selectCharacter(baseUrl, roomCode, first.cookie, "spark")).status,
+      200,
+    );
+    assert.equal(
+      (await selectCharacter(baseUrl, roomCode, second.cookie, "volt")).status,
       200,
     );
     assert.equal(
@@ -143,6 +157,19 @@ async function post(
     headers: { Cookie: cookie },
   });
   return { response, body: await response.json() };
+}
+
+async function selectCharacter(
+  baseUrl: string,
+  roomCode: string,
+  cookie: string,
+  character: string,
+): Promise<Response> {
+  return fetch(`${baseUrl}/rooms/${roomCode}/character`, {
+    method: "PUT",
+    headers: { Cookie: cookie, "content-type": "application/json" },
+    body: JSON.stringify({ character }),
+  });
 }
 
 async function openSocket(url: string, cookie: string): Promise<WebSocket> {

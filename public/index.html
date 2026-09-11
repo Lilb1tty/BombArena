@@ -3,168 +3,2787 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Pixel Arena</title>
+    <meta
+      name="description"
+      content="BombArena is an authoritative multiplayer bomb arena."
+    />
+    <title>BombArena - Multiplayer Arena</title>
     <style>
       :root {
         color-scheme: dark;
-        font-family: system-ui, sans-serif;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        background: #07111b;
+        color: #edf5ff;
+      }
+      * {
+        box-sizing: border-box;
       }
       body {
-        display: grid;
-        min-height: 100vh;
         margin: 0;
-        place-items: center;
-        background: #111827;
+        min-width: 20rem;
+        background:
+          radial-gradient(circle at 50% -20%, #214661, transparent 42rem),
+          #07111b;
       }
-      main {
-        max-width: 34rem;
-        padding: 2.5rem;
-        text-align: center;
+      button,
+      input {
+        font: inherit;
+      }
+      button {
+        border: 0;
+        cursor: pointer;
+      }
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      .shell {
+        margin: auto;
+        max-width: 84rem;
+        min-height: 100vh;
+        padding: 1.25rem;
+      }
+      .topbar {
+        align-items: center;
+        display: flex;
+        justify-content: space-between;
+        margin: 0 auto 2rem;
+        max-width: 76rem;
+      }
+      .brand {
+        align-items: center;
+        color: inherit;
+        display: flex;
+        font-size: 1.2rem;
+        font-weight: 900;
+        gap: 0.65rem;
+        letter-spacing: -0.04em;
+        text-decoration: none;
+      }
+      .brand-mark {
+        background: linear-gradient(135deg, #ffba39, #f15a42);
+        border-radius: 0.7rem;
+        box-shadow: 0 0.6rem 1.8rem #f15a423b;
+        display: grid;
+        height: 2.25rem;
+        place-items: center;
+        width: 2.25rem;
+      }
+      .brand b,
+      h1 span {
+        color: #ffbd3f;
+      }
+      .account-area {
+        align-items: center;
+        display: flex;
+        gap: 0.65rem;
+      }
+      .account-chip {
+        align-items: center;
+        background: #172535;
+        border: 1px solid #2a4157;
+        border-radius: 999px;
+        display: flex;
+        font-size: 0.85rem;
+        gap: 0.45rem;
+        padding: 0.42rem 0.75rem;
+      }
+      .account-chip::before {
+        background: #49d59a;
+        border-radius: 50%;
+        content: "";
+        height: 0.45rem;
+        width: 0.45rem;
+      }
+      .quiet-button {
+        background: transparent;
+        border: 1px solid #33485c;
+        border-radius: 0.55rem;
+        color: #c3d1df;
+        padding: 0.45rem 0.7rem;
+      }
+      .quiet-button:hover {
+        background: #1b2c3e;
+        color: white;
+      }
+      .page {
+        margin: auto;
+        max-width: 76rem;
+      }
+      .panel {
+        background: linear-gradient(145deg, #122333, #0d1825);
+        border: 1px solid #263f55;
+        border-radius: 1.25rem;
+        box-shadow: 0 1.2rem 3rem #00000035;
+      }
+      .eyebrow {
+        color: #66d8fa;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.13em;
+        margin: 0 0 0.65rem;
+        text-transform: uppercase;
+      }
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
       }
       h1 {
-        color: #fbbf24;
-        font-size: clamp(2.5rem, 10vw, 5rem);
+        font-size: clamp(2.35rem, 7vw, 4.75rem);
+        letter-spacing: -0.065em;
+        line-height: 0.96;
+        margin-bottom: 1.1rem;
+      }
+      h2 {
+        font-size: 1.4rem;
+        letter-spacing: -0.03em;
+      }
+      .muted {
+        color: #9db0c1;
+        line-height: 1.55;
+      }
+      .auth-layout {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: 1.1fr 0.9fr;
+      }
+      .hero {
+        min-height: 29rem;
+        overflow: hidden;
+        padding: clamp(1.7rem, 4vw, 4rem);
+        position: relative;
+      }
+      .hero::after {
+        background: radial-gradient(
+          circle,
+          #ffbd3f36 0 12%,
+          transparent 13% 100%
+        );
+        content: "";
+        height: 38rem;
+        position: absolute;
+        right: -13rem;
+        top: -13rem;
+        width: 38rem;
+      }
+      .hero-copy {
+        max-width: 34rem;
+        position: relative;
+        z-index: 1;
+      }
+      .feature-list {
+        display: grid;
+        gap: 0.65rem;
+        list-style: none;
+        margin: 2rem 0 0;
+        padding: 0;
+      }
+      .feature-list li {
+        align-items: center;
+        color: #c5d5e4;
+        display: flex;
+        gap: 0.65rem;
+      }
+      .feature-list li::before {
+        background: #28506a;
+        border: 1px solid #4d8aa9;
+        border-radius: 50%;
+        color: #7ee1ff;
+        content: "OK";
+        display: grid;
+        font-size: 0.7rem;
+        font-weight: 900;
+        height: 1.35rem;
+        place-items: center;
+        width: 1.35rem;
+      }
+      .auth-card {
+        padding: clamp(1.5rem, 4vw, 2.5rem);
+      }
+      .stack {
+        display: grid;
+        gap: 0.85rem;
+      }
+      label {
+        color: #b9c8d7;
+        display: grid;
+        font-size: 0.84rem;
+        font-weight: 700;
+        gap: 0.4rem;
+      }
+      input {
+        background: #09131e;
+        border: 1px solid #31495e;
+        border-radius: 0.65rem;
+        color: #f5f9ff;
+        outline: none;
+        padding: 0.78rem 0.85rem;
+      }
+      input:focus {
+        border-color: #64d9fa;
+        box-shadow: 0 0 0 0.2rem #64d9fa21;
+      }
+      .primary-button {
+        background: linear-gradient(135deg, #ffca50, #ef8d32);
+        border-radius: 0.65rem;
+        box-shadow: 0 0.55rem 1.1rem #dc812a2b;
+        color: #201203;
+        font-weight: 900;
+        padding: 0.8rem 1rem;
+      }
+      .primary-button:hover {
+        filter: brightness(1.08);
+        transform: translateY(-1px);
+      }
+      .text-button {
+        background: transparent;
+        color: #76dcfa;
+        font-weight: 700;
+        padding: 0.2rem;
+      }
+      .form-note {
+        color: #8297a9;
+        font-size: 0.78rem;
+        line-height: 1.45;
+        margin: 1rem 0 0;
+      }
+      .form-error {
+        color: #ff998e;
+        font-size: 0.85rem;
+        min-height: 1.2rem;
+      }
+      .lobby {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: 0.9fr 1.1fr;
+      }
+      .lobby-intro,
+      .room-panel {
+        padding: clamp(1.3rem, 3vw, 2rem);
+      }
+      .lobby-intro {
+        background: linear-gradient(160deg, #162c41, #102031);
+      }
+      .lobby-actions {
+        display: grid;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+      }
+      .join-row {
+        display: grid;
+        gap: 0.55rem;
+        grid-template-columns: 1fr auto;
+      }
+      .join-row input {
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .room-panel {
+        min-height: 23rem;
+      }
+      .room-empty {
+        align-content: center;
+        color: #8ea3b6;
+        display: grid;
+        justify-items: center;
+        min-height: 18rem;
+        text-align: center;
+      }
+      .empty-mark {
+        font-size: 3.5rem;
+        opacity: 0.55;
+      }
+      .room-head {
+        align-items: flex-start;
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+      .code-block {
+        align-items: center;
+        background: #09131e;
+        border: 1px dashed #47657d;
+        border-radius: 0.85rem;
+        display: flex;
+        justify-content: space-between;
+        margin: 1.35rem 0;
+        padding: 0.9rem 1rem;
+      }
+      .code-block small {
+        color: #8da2b4;
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .room-code-value {
+        color: #ffca50;
+        font-family: ui-monospace, monospace;
+        font-size: 1.65rem;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+      }
+      .copy-button {
+        background: #213a4f;
+        border-radius: 0.5rem;
+        color: #cdeaff;
+        padding: 0.5rem 0.65rem;
+      }
+      .room-state {
+        background: #132a3a;
+        border: 1px solid #2c5872;
+        border-radius: 0.7rem;
+        color: #9fe8ff;
+        font-size: 0.85rem;
+        font-weight: 750;
+        margin-bottom: 1rem;
+        padding: 0.7rem 0.85rem;
+      }
+      .roster {
+        display: grid;
+        gap: 0.55rem;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .roster-slot {
+        align-items: center;
+        background: #0d1925;
+        border: 1px solid #24394d;
+        border-radius: 0.65rem;
+        display: flex;
+        gap: 0.65rem;
+        padding: 0.65rem;
+      }
+      .roster-slot.empty {
+        border-style: dashed;
+        color: #6f8497;
+      }
+      .avatar {
+        background: #304b65;
+        border-radius: 0.5rem;
+        display: grid;
+        font-size: 0.75rem;
+        font-weight: 900;
+        height: 2rem;
+        place-items: center;
+        width: 2rem;
+      }
+      .roster-name {
+        flex: 1;
+        font-size: 0.9rem;
+        font-weight: 750;
+      }
+      .ready-badge {
+        background: #153f35;
+        border-radius: 999px;
+        color: #70e5b7;
+        font-size: 0.7rem;
+        font-weight: 800;
+        padding: 0.27rem 0.5rem;
+      }
+      .waiting-badge {
+        color: #94a8b9;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+      .room-controls {
+        display: flex;
+        gap: 0.65rem;
+        margin-top: 1.15rem;
+      }
+      .danger-button {
+        background: transparent;
+        border: 1px solid #744249;
+        border-radius: 0.65rem;
+        color: #ffb2a8;
+        padding: 0.75rem 0.85rem;
+      }
+      .room-controls .primary-button {
+        flex: 1;
+      }
+      .game-screen {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: minmax(0, 1fr) 17rem;
+      }
+      .arena-panel {
+        min-width: 0;
+        overflow: hidden;
+        padding: clamp(0.85rem, 2.5vw, 1.5rem);
+      }
+      .arena-header {
+        align-items: center;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+      }
+      .arena-title {
+        align-items: center;
+        display: flex;
+        gap: 0.65rem;
+      }
+      .arena-title h2 {
+        font-size: 1.1rem;
         margin: 0;
       }
-      p {
-        color: #d1d5db;
-        font-size: 1.15rem;
-        line-height: 1.6;
+      .live-dot {
+        background: #41da99;
+        border-radius: 50%;
+        box-shadow: 0 0 0 0.28rem #41da9926;
+        height: 0.5rem;
+        width: 0.5rem;
       }
-      code {
-        color: #67e8f9;
+      .connection-label {
+        color: #9ab0c2;
+        font-size: 0.76rem;
       }
-      input,
-      button {
-        font: inherit;
-        margin: 0.25rem;
-        padding: 0.5rem;
+      .match-time {
+        color: #ffcc5b;
+        font-family: ui-monospace, monospace;
+        font-size: 1.1rem;
+        font-weight: 900;
       }
-      #state {
-        max-height: 18rem;
-        overflow: auto;
+      #arena {
+        aspect-ratio: 13/11;
+        border: 0.45rem solid #263f55;
+        border-radius: 0.7rem;
+        box-shadow:
+          inset 0 0 0 1px #081019,
+          0 1rem 2.5rem #00000045;
+        display: grid;
+        margin: auto;
+        max-width: 100%;
+        overflow: hidden;
+      }
+      .tile {
+        align-items: center;
+        background: #183247;
+        display: flex;
+        justify-content: center;
+        min-width: 0;
+        position: relative;
+      }
+      .tile::after {
+        border: 1px solid #ffffff08;
+        content: "";
+        inset: 0;
+        pointer-events: none;
+        position: absolute;
+      }
+      .tile.wall {
+        background: linear-gradient(135deg, #35516c, #21394f);
+      }
+      .tile.crate {
+        background: linear-gradient(135deg, #b56d2f, #72411e);
+      }
+      .tile.fire {
+        background: #e95835;
+        box-shadow: inset 0 0 0 2px #ffbd4c;
+      }
+      .tile.pickup {
+        background: #1a604f;
+      }
+      .tile.bomb {
+        background: #131b2b;
+      }
+      .token {
+        align-items: center;
+        border-radius: 50%;
+        display: grid;
+        font-size: clamp(0.55rem, 2.5vw, 1.2rem);
+        font-weight: 900;
+        height: 72%;
+        place-items: center;
+        position: relative;
+        width: 72%;
+        z-index: 1;
+      }
+      .bomb-token {
+        background: radial-gradient(
+          circle at 35% 28%,
+          #65758c 0 8%,
+          #1a2333 10% 62%,
+          #0d1420 64%
+        );
+        color: #f6b73a;
+      }
+      .fire-token {
+        color: #ffe46b;
+        filter: drop-shadow(0 0 0.3rem #f46f38);
+      }
+      .pickup-token {
+        color: #c8ffe5;
+      }
+      .player-0 {
+        background: #ffba42;
+        color: #402800;
+      }
+      .player-1 {
+        background: #5cd5f5;
+        color: #08354a;
+      }
+      .player-2 {
+        background: #c58bff;
+        color: #2c1248;
+      }
+      .player-3 {
+        background: #f97d9f;
+        color: #4a0e22;
+      }
+      .eliminated {
+        background: #42566a;
+        color: #a8bacb;
+        opacity: 0.65;
+      }
+      .control-hint {
+        color: #849aad;
+        font-size: 0.76rem;
+        margin: 1rem 0 0;
+        text-align: center;
+      }
+      .touch-controls {
+        display: none;
+        gap: 0.35rem;
+        grid-template-columns: repeat(3, 1fr);
+        margin: 1rem auto 0;
+        max-width: 14rem;
+      }
+      .touch-controls button {
+        background: #20384d;
+        border: 1px solid #3f607a;
+        border-radius: 0.55rem;
+        color: #e7f4ff;
+        font-weight: 900;
+        min-height: 2.4rem;
+      }
+      .touch-controls button:active {
+        background: #ffbd3f;
+        color: #241600;
+      }
+      .touch-controls [data-input="up"],
+      .touch-controls [data-input="bomb"],
+      .touch-controls [data-input="down"] {
+        grid-column: 2;
+      }
+      .touch-controls [data-input="bomb"] {
+        background: #743b36;
+        border-color: #ae564e;
+      }
+      .hud {
+        display: grid;
+        gap: 1rem;
+      }
+      .hud-card {
+        padding: 1rem;
+      }
+      .hud-card h3 {
+        color: #9eb5c8;
+        font-size: 0.72rem;
+        letter-spacing: 0.1em;
+        margin-bottom: 0.9rem;
+        text-transform: uppercase;
+      }
+      .player-card {
+        align-items: center;
+        border-top: 1px solid #263c4e;
+        display: flex;
+        gap: 0.65rem;
+        padding: 0.65rem 0;
+      }
+      .player-card:first-of-type {
+        border-top: 0;
+        padding-top: 0;
+      }
+      .player-color {
+        border-radius: 50%;
+        flex: 0 0 auto;
+        height: 0.75rem;
+        width: 0.75rem;
+      }
+      .player-meta {
+        flex: 1;
+        min-width: 0;
+      }
+      .player-meta strong {
+        display: block;
+        font-size: 0.84rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .player-meta small {
+        color: #8ca2b4;
+        font-size: 0.7rem;
+      }
+      .player-stats {
+        color: #ffcb5a;
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-align: right;
+        white-space: pre;
+      }
+      .legend {
+        color: #8fa5b7;
+        display: grid;
+        font-size: 0.77rem;
+        gap: 0.55rem;
+      }
+      .legend span {
+        align-items: center;
+        display: flex;
+        gap: 0.45rem;
+      }
+      .legend i {
+        border-radius: 0.25rem;
+        height: 0.9rem;
+        width: 0.9rem;
+      }
+      .result-overlay {
+        align-items: center;
+        backdrop-filter: blur(0.35rem);
+        background: #06101bd1;
+        display: grid;
+        inset: 0;
+        justify-items: center;
+        padding: 1rem;
+        position: fixed;
+        z-index: 5;
+      }
+      .result-card {
+        max-width: 27rem;
+        padding: 2.25rem;
+        text-align: center;
+        width: 100%;
+      }
+      .result-icon {
+        font-size: 3.5rem;
+        margin-bottom: 0.75rem;
+      }
+      .result-card h2 {
+        font-size: 2rem;
+        margin-bottom: 0.6rem;
+      }
+      .result-card p {
+        color: #a7b9c8;
+        line-height: 1.5;
+      }
+      .result-card .primary-button {
+        display: block;
+        margin-top: 1.35rem;
+        width: 100%;
+      }
+      .toast {
+        background: #172b3c;
+        border: 1px solid #47657b;
+        border-radius: 0.65rem;
+        bottom: 1rem;
+        box-shadow: 0 0.7rem 2rem #00000055;
+        color: #e8f5ff;
+        max-width: min(25rem, calc(100vw - 2rem));
+        padding: 0.75rem 0.9rem;
+        position: fixed;
+        right: 1rem;
+        transform: translateY(8rem);
+        transition: transform 180ms ease;
+        z-index: 10;
+      }
+      .toast.visible {
+        transform: translateY(0);
+      }
+      .toast.error {
+        border-color: #9d4a4a;
+        color: #ffd0ca;
+      }
+      @media (max-width: 52rem) {
+        .auth-layout,
+        .lobby,
+        .game-screen {
+          grid-template-columns: 1fr;
+        }
+        .hero {
+          min-height: auto;
+        }
+        .hud {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .hud .hud-card:last-child {
+          grid-column: span 2;
+        }
+        .touch-controls {
+          display: grid;
+        }
+      }
+      @media (max-width: 34rem) {
+        .shell {
+          padding: 0.8rem;
+        }
+        .topbar {
+          margin-bottom: 1rem;
+        }
+        .account-chip {
+          max-width: 9rem;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .hud {
+          grid-template-columns: 1fr;
+        }
+        .hud .hud-card:last-child {
+          grid-column: auto;
+        }
+        .control-hint {
+          display: none;
+        }
+      }
+
+      /* Apple-inspired web approximation: product surface first, chrome second. */
+      :root {
+        background: #ffffff;
+        color: #1d1d1f;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui,
+          sans-serif;
+      }
+      body {
+        background: #ffffff;
+      }
+      .shell {
+        max-width: none;
+        padding: 0;
+      }
+      .topbar {
+        background: #000000;
+        margin: 0;
+        max-width: none;
+        min-height: 44px;
+        padding: 0 clamp(1rem, 5vw, 7rem);
+      }
+      .brand {
+        font-size: 1rem;
+      }
+      .brand b {
+        color: #ffffff;
+      }
+      .brand-mark {
+        background: #0066cc;
+        border-radius: 5px;
+        box-shadow: none;
+        font-size: 0.62rem;
+        letter-spacing: -0.04em;
+      }
+      .page {
+        max-width: none;
+      }
+      .panel {
+        background: #ffffff;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+      .auth-layout,
+      .lobby {
+        gap: 0;
+      }
+      .hero,
+      .lobby-intro {
+        background: #f5f5f7;
+        min-height: min(44rem, calc(100dvh - 44px));
+      }
+      .hero::after {
+        display: none;
+      }
+      .hero-copy {
+        max-width: 36rem;
+      }
+      h1,
+      h2,
+      h3 {
+        color: #1d1d1f;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui,
+          sans-serif;
+        font-weight: 600;
+        letter-spacing: -0.025em;
+      }
+      h1 {
+        font-size: clamp(2.65rem, 5vw, 4.5rem);
+        line-height: 1.07;
+      }
+      h1 span {
+        color: #1d1d1f;
+      }
+      .eyebrow {
+        color: #7a7a7a;
+        font-weight: 400;
+        letter-spacing: 0;
+        text-transform: none;
+      }
+      .muted,
+      .form-note {
+        color: #333333;
+        font-size: 1.06rem;
+        line-height: 1.47;
+      }
+      .feature-list li {
+        color: #1d1d1f;
+      }
+      .feature-list li::before {
+        background: #0066cc;
+        border: 0;
+        color: #ffffff;
+      }
+      .auth-card,
+      .room-panel {
+        border-left: 1px solid #e0e0e0;
+      }
+      label {
+        color: #1d1d1f;
+        font-weight: 400;
+      }
+      input {
+        background: #ffffff;
+        border-color: #d2d2d7;
+        border-radius: 9999px;
+        color: #1d1d1f;
+      }
+      input:focus {
+        border-color: #0071e3;
+        box-shadow: 0 0 0 2px #0071e3;
+      }
+      .primary-button {
+        background: #0066cc;
+        border-radius: 9999px;
+        box-shadow: none;
+        color: #ffffff;
+        font-weight: 400;
+      }
+      .primary-button:hover {
+        filter: none;
+        transform: none;
+      }
+      button:active {
+        transform: scale(0.95);
+      }
+      .quiet-button,
+      .copy-button {
+        background: transparent;
+        border-color: #0066cc;
+        border-radius: 9999px;
+        color: #0066cc;
+      }
+      .text-button {
+        color: #0066cc;
+      }
+      .account-chip {
+        background: transparent;
+        border-color: #48484a;
+        color: #ffffff;
+      }
+      .account-chip::before {
+        background: #2997ff;
+      }
+      .lobby-intro {
+        border-right: 1px solid #e0e0e0;
+      }
+      .room-panel {
+        min-height: 0;
+      }
+      .code-block {
+        background: #f5f5f7;
+        border-color: #d2d2d7;
+        border-radius: 0;
+      }
+      .room-code-value {
+        color: #1d1d1f;
+      }
+      .room-state {
+        background: #f5f5f7;
+        border-color: #e0e0e0;
+        border-radius: 0;
+        color: #333333;
+        font-weight: 400;
+      }
+      .roster-slot {
+        background: #ffffff;
+        border-color: #e0e0e0;
+        border-radius: 0;
+      }
+      .roster-slot.empty {
+        color: #7a7a7a;
+      }
+      .avatar {
+        background: #f5f5f7;
+        border-radius: 0;
+        color: #1d1d1f;
+      }
+      .ready-badge {
+        background: #e8f2ff;
+        border-radius: 9999px;
+        color: #0066cc;
+      }
+      .waiting-badge {
+        color: #7a7a7a;
+      }
+      .danger-button {
+        border-color: #d2d2d7;
+        border-radius: 9999px;
+        color: #333333;
+      }
+      .game-screen {
+        background: #ffffff;
+        padding: clamp(1rem, 4vw, 4rem);
+      }
+      .arena-panel,
+      .hud-card {
+        border: 1px solid #e0e0e0;
+      }
+      #arena {
+        border-color: #000000;
+        border-radius: 0;
+        box-shadow: none;
+      }
+      .tile {
+        background: #e7eef5;
+      }
+      .tile.wall {
+        background: #76899a;
+      }
+      .tile.crate {
+        background: #9bb2c5;
+      }
+      .tile.fire {
+        background: #0066cc;
+        box-shadow: none;
+      }
+      .tile.pickup {
+        background: #dcecff;
+      }
+      .tile.bomb {
+        background: #1d1d1f;
+      }
+      .token {
+        border-radius: 50%;
+        font-size: clamp(0.45rem, 1.3vw, 0.75rem);
+      }
+      .bomb-token {
+        background: #1d1d1f;
+        color: #ffffff;
+      }
+      .fire-token,
+      .pickup-token {
+        color: #0066cc;
+        filter: none;
+      }
+      .player-0,
+      .player-1,
+      .player-2,
+      .player-3 {
+        background: #0066cc;
+        color: #ffffff;
+      }
+      .eliminated {
+        background: #7a7a7a;
+      }
+      .touch-controls button {
+        background: #ffffff;
+        border-color: #0066cc;
+        border-radius: 9999px;
+        color: #0066cc;
+      }
+      .touch-controls [data-input="bomb"] {
+        background: #0066cc;
+        border-color: #0066cc;
+        color: #ffffff;
+      }
+      .match-time,
+      .player-stats {
+        color: #1d1d1f;
+      }
+      .connection-label,
+      .control-hint,
+      .legend,
+      .player-meta small {
+        color: #7a7a7a;
+      }
+      .hud-card h3 {
+        color: #333333;
+        letter-spacing: 0;
+      }
+      .result-overlay {
+        backdrop-filter: blur(8px);
+        background: rgb(255 255 255 / 0.86);
+      }
+      .result-card {
+        border: 1px solid #e0e0e0;
+      }
+      .result-icon {
+        color: #0066cc;
+        font-size: 1rem;
+        font-weight: 600;
+        letter-spacing: 0;
+      }
+      .toast {
+        background: #1d1d1f;
+        border: 0;
+        border-radius: 8px;
+        box-shadow: none;
+        color: #ffffff;
+      }
+      .toast.error {
+        background: #333333;
+        color: #ffffff;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+        }
+      }
+      @media (max-width: 52rem) {
+        .auth-card,
+        .room-panel {
+          border-left: 0;
+          border-top: 1px solid #e0e0e0;
+        }
+        .lobby-intro {
+          border-right: 0;
+        }
+      }
+      /* Vercel-inspired product surface with a dedicated pixel-game language. */
+      :root {
+        --ink: #171717;
+        --muted-ink: #666666;
+        --line: #ebebeb;
+        --signal: #0070f3;
+        background: #ffffff;
+        color: var(--ink);
+        color-scheme: light;
+        font-family:
+          Geist, "Arial Nova", Arial, ui-sans-serif, system-ui, sans-serif;
+      }
+      body {
+        background: #ffffff;
+      }
+      .topbar {
+        background: #ffffff;
+        border-bottom: 1px solid var(--line);
+        min-height: 64px;
+      }
+      .brand {
+        color: var(--ink);
+        font-family:
+          Geist Mono,
+          "SFMono-Regular",
+          Consolas,
+          monospace;
+        font-size: 0.88rem;
+        letter-spacing: -0.05em;
+      }
+      .brand b {
+        color: var(--ink);
+      }
+      .brand-mark {
+        background: var(--ink);
+        border-radius: 0;
+        height: 1.5rem;
+        width: 1.5rem;
+      }
+      .account-chip {
+        background: #ffffff;
+        border-color: var(--line);
+        color: var(--ink);
+      }
+      .account-chip::before {
+        background: var(--signal);
+      }
+      .hero {
+        align-items: end;
+        background:
+          radial-gradient(
+            circle at 75% 22%,
+            rgb(0 112 243 / 0.28),
+            transparent 19rem
+          ),
+          radial-gradient(
+            circle at 85% 66%,
+            rgb(255 0 128 / 0.23),
+            transparent 22rem
+          ),
+          radial-gradient(
+            circle at 47% 84%,
+            rgb(255 190 0 / 0.24),
+            transparent 20rem
+          ),
+          #ffffff;
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(18rem, 1.1fr);
+        isolation: isolate;
+        min-height: clamp(36rem, 74vh, 50rem);
+        overflow: hidden;
+      }
+      .hero::before {
+        background-image:
+          linear-gradient(rgb(23 23 23 / 0.055) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(23 23 23 / 0.055) 1px, transparent 1px);
+        background-size: 24px 24px;
+        content: "";
+        inset: 0;
+        mask-image: linear-gradient(to right, #000000 0 45%, transparent 85%);
+        pointer-events: none;
+        position: absolute;
+        z-index: -1;
+      }
+      .hero-copy {
+        align-self: center;
+        max-width: 34rem;
+      }
+      .hero h1 {
+        color: var(--ink);
+        font-family: Geist, "Arial Nova", Arial, sans-serif;
+        font-size: clamp(3.3rem, 7vw, 6.65rem);
+        letter-spacing: -0.085em;
+        line-height: 0.86;
+        max-width: 8ch;
+      }
+      .hero h1 span {
+        color: var(--ink);
+      }
+      .hero .muted {
+        max-width: 30rem;
+      }
+      .eyebrow {
+        color: var(--muted-ink);
+        font-family:
+          Geist Mono,
+          "SFMono-Regular",
+          Consolas,
+          monospace;
+        font-size: 0.68rem;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+      .feature-list li::before {
+        background: var(--ink);
+        border: 0;
+        border-radius: 50%;
+        color: #ffffff;
+        content: "+";
+      }
+      .hero-art {
+        align-self: end;
+        border: 1px solid rgb(23 23 23 / 0.12);
+        box-shadow:
+          12px 12px 0 var(--ink),
+          26px 26px 44px rgb(23 23 23 / 0.18);
+        line-height: 0;
+        margin: 0 1rem 3.2rem 1rem;
+        overflow: hidden;
+        position: relative;
+        transform: perspective(900px) rotateY(-6deg) rotateX(2deg);
+      }
+      .hero-art::after {
+        border: 1px solid rgb(255 255 255 / 0.35);
+        content: "";
+        inset: 10px;
+        pointer-events: none;
+        position: absolute;
+      }
+      .hero-art img {
+        display: block;
+        image-rendering: pixelated;
+        max-height: 28rem;
+        object-fit: cover;
+        width: 100%;
+      }
+      .primary-button,
+      .quiet-button,
+      .copy-button,
+      .danger-button {
+        min-height: 2.5rem;
+        transition:
+          background 160ms ease,
+          border-color 160ms ease,
+          color 160ms ease,
+          transform 160ms ease;
+      }
+      .primary-button {
+        background: var(--ink);
+        border-radius: 6px;
+      }
+      .primary-button:hover {
+        background: #000000;
+        transform: translateY(-1px);
+      }
+      .quiet-button,
+      .copy-button,
+      .danger-button {
+        background: #ffffff;
+        border-color: var(--line);
+        border-radius: 6px;
+        color: var(--ink);
+      }
+      .quiet-button:hover,
+      .copy-button:hover,
+      .danger-button:hover {
+        background: #fafafa;
+        border-color: var(--ink);
+        color: var(--ink);
+      }
+      .text-button {
+        color: var(--signal);
+      }
+      .auth-card,
+      .room-panel {
+        background: #ffffff;
+      }
+      .lobby-intro {
+        background:
+          radial-gradient(
+            circle at 75% 20%,
+            rgb(0 112 243 / 0.16),
+            transparent 16rem
+          ),
+          #ffffff;
+      }
+      .game-screen {
+        background: #171717;
+        min-height: 100dvh;
+      }
+      .arena-panel {
+        background: #171717;
+        border-color: #3a3a3a;
+        box-shadow: 0 24px 72px rgb(0 0 0 / 0.38);
+      }
+      .arena-header h2,
+      .arena-header .connection-label,
+      .match-time,
+      .arena-panel .control-hint {
+        color: #ffffff;
+      }
+      .arena-panel .control-hint {
+        opacity: 0.66;
+      }
+      #arena {
+        background: #101010;
+        border: 10px solid #050505;
+        box-shadow:
+          0 0 0 1px #4a4a4a,
+          0 28px 60px rgb(0 0 0 / 0.45);
+        image-rendering: pixelated;
+      }
+      .tile {
+        background-color: #222222;
+        background-image:
+          linear-gradient(45deg, rgb(255 255 255 / 0.026) 25%, transparent 25%),
+          linear-gradient(-45deg, rgb(255 255 255 / 0.026) 25%, transparent 25%);
+        background-size: 8px 8px;
+        border-radius: 0;
+      }
+      .tile.wall {
+        background-color: #4e5563;
+        background-image:
+          linear-gradient(135deg, rgb(255 255 255 / 0.17) 25%, transparent 25%),
+          linear-gradient(315deg, rgb(0 0 0 / 0.16) 25%, transparent 25%);
+        box-shadow:
+          inset -2px -2px #2c3038,
+          inset 2px 2px #747d8d;
+      }
+      .tile.crate {
+        background-color: #b15d2d;
+        background-image: linear-gradient(
+          135deg,
+          transparent 43%,
+          #703215 44% 56%,
+          transparent 57%
+        );
+        box-shadow:
+          inset -2px -2px #6c2b12,
+          inset 2px 2px #e89a5a;
+      }
+      .tile.pickup {
+        background: #243048;
+      }
+      .tile.bomb {
+        background: #2c2d34;
+      }
+      .tile.fire {
+        background: #f25428;
+        box-shadow:
+          inset 3px 3px #ffd338,
+          inset -3px -3px #9a1b24;
+      }
+      .token {
+        align-items: center;
+        border: 0;
+        border-radius: 0;
+        box-shadow: 3px 3px 0 rgb(0 0 0 / 0.55);
+        display: grid;
+        font-family:
+          Geist Mono,
+          "SFMono-Regular",
+          Consolas,
+          monospace;
+        font-size: clamp(0.42rem, 1.35vw, 0.75rem);
+        font-weight: 800;
+        height: 62%;
+        image-rendering: pixelated;
+        place-items: center;
+        width: 62%;
+      }
+      .player-0,
+      .player-1,
+      .player-2,
+      .player-3 {
+        animation: pixel-idle 700ms steps(2, end) infinite;
+      }
+      .player-0 {
+        background: #18b8ff;
+        color: #07121a;
+      }
+      .player-1 {
+        background: #ff4d8d;
+        color: #2a0717;
+      }
+      .player-2 {
+        background: #ffd338;
+        color: #241b00;
+      }
+      .player-3 {
+        background: #7ee487;
+        color: #071d10;
+      }
+      .bomb-token {
+        animation: bomb-tick 680ms steps(2, end) infinite;
+        background: #0c0c0d;
+        box-shadow:
+          3px 3px 0 #000000,
+          inset 2px 2px #696d78;
+        color: #ffffff;
+      }
+      .fire-token {
+        animation: flame-flicker 320ms steps(2, end) infinite;
+        color: #fff4bf;
+        filter: none;
+        text-shadow:
+          3px 0 #ffaf1a,
+          -3px 0 #d61f2c;
+      }
+      .pickup-token {
+        animation: pickup-spark 900ms steps(2, end) infinite;
+        color: #87d4ff;
+        filter: none;
+      }
+      .eliminated {
+        animation: none;
+        background: #626262;
+        color: #171717;
+        opacity: 0.6;
+      }
+      .hud-card {
+        background: #1e1e1e;
+        border-color: #3a3a3a;
+      }
+      .hud-card h3,
+      .hud-card strong,
+      .player-stats {
+        color: #ffffff;
+      }
+      .hud-card .player-meta small,
+      .hud-card .legend {
+        color: #a3a3a3;
+      }
+      .touch-controls button {
+        background: #222222;
+        border-color: #4d4d4d;
+        border-radius: 4px;
+        color: #ffffff;
+        font-family:
+          Geist Mono,
+          "SFMono-Regular",
+          Consolas,
+          monospace;
+      }
+      .touch-controls [data-input="bomb"] {
+        background: #e13e34;
+        border-color: #ff735f;
+      }
+      .result-overlay {
+        backdrop-filter: none;
+        background: rgb(0 0 0 / 0.78);
+      }
+      .result-card {
+        background: #ffffff;
+        border: 8px solid #171717;
+        box-shadow: 12px 12px 0 #0070f3;
+      }
+      @keyframes pixel-idle {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-2px);
+        }
+      }
+      @keyframes bomb-tick {
+        0%,
+        100% {
+          transform: scale(0.86);
+        }
+        50% {
+          transform: scale(1.04);
+        }
+      }
+      @keyframes flame-flicker {
+        0%,
+        100% {
+          transform: scale(0.82) translateY(1px);
+        }
+        50% {
+          transform: scale(1.08) translateY(-1px);
+        }
+      }
+      @keyframes pickup-spark {
+        0%,
+        100% {
+          transform: translateY(1px);
+          opacity: 0.7;
+        }
+        50% {
+          transform: translateY(-2px);
+          opacity: 1;
+        }
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .hero-art {
+          animation: hero-pixel-float 4.2s steps(8, end) infinite;
+        }
+      }
+      @keyframes hero-pixel-float {
+        0%,
+        100% {
+          transform: perspective(900px) rotateY(-6deg) rotateX(2deg)
+            translateY(0);
+        }
+        50% {
+          transform: perspective(900px) rotateY(-6deg) rotateX(2deg)
+            translateY(-7px);
+        }
+      }
+      @media (max-width: 52rem) {
+        .hero {
+          grid-template-columns: 1fr;
+          min-height: auto;
+          padding-bottom: 3rem;
+        }
+        .hero-copy {
+          padding-top: 3rem;
+        }
+        .hero-art {
+          margin: 2rem 0 0;
+          max-width: 34rem;
+        }
+        .hero h1 {
+          max-width: 9ch;
+        }
+      }
+      /* Sprite silhouettes keep the board readable without using letter tiles. */
+      .token.player-0,
+      .token.player-1,
+      .token.player-2,
+      .token.player-3 {
+        background: transparent;
+        box-shadow: none;
+        color: transparent;
+        overflow: visible;
+        position: relative;
+      }
+      .token.player-0 {
+        --sprite: #18b8ff;
+        --sprite-dark: #086589;
+      }
+      .token.player-1 {
+        --sprite: #ff4d8d;
+        --sprite-dark: #8a1748;
+      }
+      .token.player-2 {
+        --sprite: #ffd338;
+        --sprite-dark: #927000;
+      }
+      .token.player-3 {
+        --sprite: #7ee487;
+        --sprite-dark: #238941;
+      }
+      .token.player-0::before,
+      .token.player-1::before,
+      .token.player-2::before,
+      .token.player-3::before {
+        background: var(--sprite);
+        box-shadow: 2px 2px 0 var(--sprite-dark);
+        content: "";
+        height: 35%;
+        left: 31%;
+        position: absolute;
+        top: 1%;
+        width: 38%;
+      }
+      .token.player-0::after,
+      .token.player-1::after,
+      .token.player-2::after,
+      .token.player-3::after {
+        background: var(--sprite);
+        box-shadow:
+          3px 3px 0 var(--sprite-dark),
+          -3px 5px 0 var(--sprite-dark),
+          3px 5px 0 var(--sprite-dark);
+        clip-path: polygon(
+          22% 0,
+          78% 0,
+          100% 28%,
+          82% 100%,
+          63% 100%,
+          63% 68%,
+          37% 68%,
+          37% 100%,
+          18% 100%,
+          0 28%
+        );
+        content: "";
+        height: 58%;
+        left: 12%;
+        position: absolute;
+        top: 38%;
+        width: 76%;
+      }
+      .token.bomb-token {
+        background: #111318;
+        border: 3px solid #727989;
+        border-radius: 0;
+        box-shadow:
+          3px 3px 0 #000000,
+          inset 3px 3px #414756;
+        color: transparent;
+        clip-path: polygon(
+          25% 0,
+          75% 0,
+          100% 25%,
+          100% 75%,
+          75% 100%,
+          25% 100%,
+          0 75%,
+          0 25%
+        );
+        overflow: visible;
+        position: relative;
+      }
+      .token.bomb-token::before {
+        background: #ffd338;
+        box-shadow: 2px 0 #f15a42;
+        content: "";
+        height: 21%;
+        left: 46%;
+        position: absolute;
+        top: -27%;
+        width: 16%;
+      }
+      .token.fire-token {
+        background: #ffb51f;
+        box-shadow: 3px 3px 0 #a6252d;
+        color: transparent;
+        clip-path: polygon(
+          50% 0,
+          67% 31%,
+          90% 31%,
+          77% 57%,
+          100% 72%,
+          61% 100%,
+          31% 88%,
+          0 73%,
+          23% 49%,
+          13% 27%,
+          38% 31%
+        );
+      }
+      .token.pickup-token {
+        background: #8bd7ff;
+        box-shadow: 3px 3px 0 #257ca8;
+        color: transparent;
+        position: relative;
+      }
+      .token.pickup-token::before,
+      .token.pickup-token::after {
+        background: #0b3154;
+        content: "";
+        left: 20%;
+        position: absolute;
+        top: 43%;
+      }
+      .token.pickup-token::before {
+        height: 14%;
+        width: 60%;
+      }
+      .token.pickup-token::after {
+        height: 60%;
+        left: 43%;
+        top: 20%;
+        width: 14%;
+      }
+
+      /* Character selection and sprites deliberately use blocky CSS pixels. */
+      .character-picker {
+        border-top: 1px solid var(--line);
+        margin: 1.25rem 0;
+        padding-top: 1rem;
+      }
+      .character-picker-head {
+        align-items: end;
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+      }
+      .character-picker h3 {
+        font-size: 0.92rem;
+        margin: 0;
+      }
+      .character-picker .eyebrow {
+        font-size: 0.56rem;
+        margin-bottom: 0.25rem;
+      }
+      .character-select {
+        display: grid;
+        gap: 0.45rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .character-card {
+        align-items: center;
+        background: #f8f8f8;
+        border: 2px solid #dedede;
+        color: var(--ink);
+        display: flex;
+        gap: 0.5rem;
+        min-height: 4.5rem;
+        padding: 0.45rem;
         text-align: left;
-        white-space: pre-wrap;
+      }
+      .character-card:hover:not(:disabled),
+      .character-card.selected {
+        background: #ffffff;
+        border-color: var(--ink);
+        box-shadow: 3px 3px 0 var(--ink);
+        transform: translate(-1px, -1px);
+      }
+      .character-card:disabled {
+        background: #f2f2f2;
+        color: #999999;
+      }
+      .character-card strong,
+      .character-card small {
+        display: block;
+        font-family:
+          Geist Mono,
+          "SFMono-Regular",
+          Consolas,
+          monospace;
+      }
+      .character-card strong {
+        font-size: 0.72rem;
+      }
+      .character-card small {
+        color: #777777;
+        font-size: 0.58rem;
+        margin-top: 0.22rem;
+      }
+      .sprite,
+      .token.character-spark,
+      .token.character-volt,
+      .token.character-moss,
+      .token.character-rose {
+        background: transparent;
+        box-shadow: none;
+        color: transparent;
+        image-rendering: pixelated;
+        overflow: visible;
+        position: relative;
+      }
+      .character-preview {
+        flex: 0 0 auto;
+        height: 3.25rem;
+        width: 2.8rem;
+      }
+      .avatar.sprite {
+        background: transparent;
+        flex: 0 0 auto;
+        height: 2rem;
+        width: 2rem;
+      }
+      .character-spark {
+        --sprite: #18b8ff;
+        --sprite-dark: #075b7a;
+        --sprite-light: #d4f7ff;
+      }
+      .character-volt {
+        --sprite: #ff4d8d;
+        --sprite-dark: #86133f;
+        --sprite-light: #ffd6e5;
+      }
+      .character-moss {
+        --sprite: #7ee487;
+        --sprite-dark: #1d7b36;
+        --sprite-light: #e1ffcb;
+      }
+      .character-rose {
+        --sprite: #ffd338;
+        --sprite-dark: #987000;
+        --sprite-light: #fff0a6;
+      }
+      .sprite::before,
+      .token.character-spark::before,
+      .token.character-volt::before,
+      .token.character-moss::before,
+      .token.character-rose::before {
+        background: var(--sprite-light);
+        box-shadow:
+          -2px 2px 0 var(--sprite-dark),
+          2px 2px 0 var(--sprite-dark),
+          0 4px 0 var(--sprite-dark);
+        content: "";
+        height: 31%;
+        left: 31%;
+        position: absolute;
+        top: 4%;
+        width: 38%;
+      }
+      .sprite::after,
+      .token.character-spark::after,
+      .token.character-volt::after,
+      .token.character-moss::after,
+      .token.character-rose::after {
+        background: var(--sprite);
+        box-shadow:
+          3px 3px 0 var(--sprite-dark),
+          -5px 8px 0 var(--sprite-dark),
+          5px 8px 0 var(--sprite-dark),
+          -9px 13px 0 var(--sprite),
+          9px 13px 0 var(--sprite);
+        clip-path: polygon(22% 0, 78% 0, 100% 30%, 83% 100%, 17% 100%, 0 30%);
+        content: "";
+        height: 53%;
+        left: 12%;
+        position: absolute;
+        top: 41%;
+        width: 76%;
+      }
+      .character-spark::before {
+        box-shadow:
+          -5px 0 0 var(--sprite),
+          5px 0 0 var(--sprite),
+          -2px 2px 0 var(--sprite-dark),
+          2px 2px 0 var(--sprite-dark),
+          0 4px 0 var(--sprite-dark);
+      }
+      .character-volt::before {
+        box-shadow:
+          -5px -3px 0 var(--sprite),
+          5px -3px 0 var(--sprite),
+          -2px 2px 0 var(--sprite-dark),
+          2px 2px 0 var(--sprite-dark),
+          0 4px 0 var(--sprite-dark);
+      }
+      .character-moss::after {
+        clip-path: polygon(12% 0, 88% 0, 100% 25%, 82% 100%, 18% 100%, 0 25%);
+      }
+      .character-rose::before {
+        box-shadow:
+          -6px 5px 0 var(--sprite),
+          6px 5px 0 var(--sprite),
+          -2px 2px 0 var(--sprite-dark),
+          2px 2px 0 var(--sprite-dark),
+          0 4px 0 var(--sprite-dark);
+      }
+      .token.character-spark,
+      .token.character-volt,
+      .token.character-moss,
+      .token.character-rose {
+        animation: sprite-idle 680ms steps(2, end) infinite;
+      }
+      .token.is-moving.character-spark {
+        animation: spark-run 180ms steps(2, end);
+      }
+      .token.is-moving.character-volt {
+        animation: volt-dash 180ms steps(2, end);
+      }
+      .token.is-moving.character-moss {
+        animation: moss-stomp 180ms steps(2, end);
+      }
+      .token.is-moving.character-rose {
+        animation: rose-step 180ms steps(2, end);
+      }
+      .token.is-placing.character-spark {
+        animation: spark-place 180ms steps(2, end);
+      }
+      .token.is-placing.character-volt {
+        animation: volt-place 180ms steps(2, end);
+      }
+      .token.is-placing.character-moss {
+        animation: moss-place 180ms steps(2, end);
+      }
+      .token.is-placing.character-rose {
+        animation: rose-place 180ms steps(2, end);
+      }
+      @keyframes sprite-idle {
+        50% {
+          transform: translateY(-2px);
+        }
+      }
+      @keyframes spark-run {
+        0% {
+          transform: translateX(-7px) rotate(-5deg);
+        }
+        100% {
+          transform: translateX(0) rotate(0);
+        }
+      }
+      @keyframes volt-dash {
+        0% {
+          transform: translateX(-10px) skewX(-14deg);
+        }
+        100% {
+          transform: translateX(0) skewX(0);
+        }
+      }
+      @keyframes moss-stomp {
+        0% {
+          transform: translateY(-5px) scaleX(0.82);
+        }
+        100% {
+          transform: translateY(0) scaleX(1.08);
+        }
+      }
+      @keyframes rose-step {
+        0% {
+          transform: translateY(5px) rotate(5deg);
+        }
+        100% {
+          transform: translateY(0) rotate(0);
+        }
+      }
+      @keyframes spark-place {
+        50% {
+          transform: translateY(5px) scale(0.9, 1.12);
+        }
+      }
+      @keyframes volt-place {
+        50% {
+          transform: translateX(-4px) rotate(-10deg);
+        }
+      }
+      @keyframes moss-place {
+        50% {
+          transform: translateY(6px) scale(1.15, 0.82);
+        }
+      }
+      @keyframes rose-place {
+        50% {
+          transform: translateY(4px) rotate(9deg);
+        }
+      }
+      @media (max-width: 34rem) {
+        .character-select {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (min-width: 52.01rem) {
+        .game-screen {
+          height: calc(100dvh - 64px);
+          min-height: 0;
+        }
+        .arena-panel {
+          display: grid;
+          min-height: 0;
+          grid-template-rows: auto minmax(0, 1fr) auto;
+        }
+        #arena {
+          align-self: stretch;
+          height: 100%;
+          justify-self: center;
+          min-height: 0;
+          max-height: 100%;
+          width: auto;
+        }
       }
     </style>
   </head>
   <body>
-    <main>
-      <h1>Pixel Arena</h1>
-      <p>Register or sign in, then create or join a Room.</p>
-      <form id="account-form">
-        <input
-          id="username"
-          required
-          minlength="3"
-          placeholder="Account name"
-        />
-        <input
-          id="password"
-          required
-          minlength="8"
-          type="password"
-          placeholder="Password"
-        />
-        <button name="action" value="register">Register</button>
-        <button name="action" value="login">Sign in</button>
-      </form>
-      <p id="account">Not signed in</p>
-      <p>
-        <button id="create" type="button">Create Room</button>
-        <input id="room-code" maxlength="6" placeholder="Room Code" />
-        <button id="join" type="button">Join Room</button>
-        <button id="ready" type="button">Ready</button>
-      </p>
-      <p id="room">No Room selected</p>
-      <pre id="state">Service status: GET /health</pre>
-    </main>
-    <script>
-      const state = document.querySelector("#state");
-      const roomText = document.querySelector("#room");
-      const accountText = document.querySelector("#account");
-      const roomCode = document.querySelector("#room-code");
-      const usernameInput = document.querySelector("#username");
-      const passwordInput = document.querySelector("#password");
-      let room;
-      let socket;
-
-      const show = (value) =>
-        (state.textContent = JSON.stringify(value, null, 2));
-      const request = async (path, options = {}) => {
+    <div class="shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="BombArena home"
+          ><span class="brand-mark">BA</span><span>Bomb<b>Arena</b></span></a
+        >
+        <div class="account-area">
+          <span id="account-chip" class="account-chip" hidden></span
+          ><button id="sign-out" class="quiet-button" type="button" hidden>
+            Sign out
+          </button>
+        </div>
+      </header>
+      <main class="page">
+        <section id="auth-view" class="auth-layout">
+          <article class="panel hero">
+            <div class="hero-copy">
+              <p class="eyebrow">Authoritative multiplayer</p>
+              <h1>Own the <span>arena.</span></h1>
+              <p class="muted">
+                Place bombs, outsmart rivals, and survive the blast. Every move
+                is resolved by the server for a fast and fair match.
+              </p>
+              <ul class="feature-list">
+                <li>2-4 players per private Room</li>
+                <li>Real-time state synchronisation</li>
+                <li>Reconnect safely during a match</li>
+              </ul>
+            </div>
+            <div class="hero-art" aria-hidden="true">
+              <img src="/assets/arena-hero-pixel.png" alt="" />
+            </div>
+          </article>
+          <section class="panel auth-card" aria-labelledby="auth-title">
+            <p id="auth-eyebrow" class="eyebrow">Welcome back</p>
+            <h2 id="auth-title">Sign in to play</h2>
+            <p id="auth-copy" class="muted">
+              Use your account to return to the arena.
+            </p>
+            <form id="account-form" class="stack">
+              <label
+                >Account name<input
+                  id="username"
+                  autocomplete="username"
+                  minlength="3"
+                  maxlength="30"
+                  required /></label
+              ><label
+                >Password<input
+                  id="password"
+                  autocomplete="current-password"
+                  minlength="8"
+                  type="password"
+                  required
+              /></label>
+              <p id="form-error" class="form-error" aria-live="polite"></p>
+              <button id="auth-submit" class="primary-button" type="submit">
+                Sign in
+              </button>
+            </form>
+            <p class="form-note">
+              <span id="auth-question">New to BombArena?</span>
+              <button id="auth-switch" class="text-button" type="button">
+                Create one
+              </button>
+            </p>
+          </section>
+        </section>
+        <section id="lobby-view" class="lobby" hidden>
+          <article class="panel lobby-intro">
+            <p class="eyebrow">Private match</p>
+            <h1>Build your <span>battle.</span></h1>
+            <p class="muted">
+              Create a Room and share its six-character code, or join friends
+              already waiting in the arena.
+            </p>
+            <div class="lobby-actions">
+              <button id="create-room" class="primary-button" type="button">
+                Create a Room
+              </button>
+              <div class="join-row">
+                <input
+                  id="room-code"
+                  aria-label="Room Code"
+                  maxlength="6"
+                  placeholder="ROOM CODE"
+                /><button id="join-room" class="quiet-button" type="button">
+                  Join
+                </button>
+              </div>
+            </div>
+          </article>
+          <section class="panel room-panel" aria-live="polite">
+            <div id="room-empty" class="room-empty">
+              <div class="empty-mark">BA</div>
+              <strong>No Room selected</strong>
+              <p>Start a private match or enter a code to join one.</p>
+            </div>
+            <div id="room-active" hidden>
+              <div class="room-head">
+                <div>
+                  <p class="eyebrow">Match lobby</p>
+                  <h2>Your Room</h2>
+                </div>
+                <span id="room-phase" class="waiting-badge">Waiting</span>
+              </div>
+              <div class="code-block">
+                <div>
+                  <small>Share this code</small
+                  ><strong
+                    id="room-code-value"
+                    class="room-code-value"
+                  ></strong>
+                </div>
+                <button id="copy-code" class="copy-button" type="button">
+                  Copy
+                </button>
+              </div>
+              <p id="room-state" class="room-state">Waiting for players...</p>
+              <section
+                class="character-picker"
+                aria-labelledby="character-title"
+              >
+                <div class="character-picker-head">
+                  <div>
+                    <p class="eyebrow">Combatant loadout</p>
+                    <h3 id="character-title">Choose your pixel fighter</h3>
+                  </div>
+                  <span id="character-status" class="waiting-badge"></span>
+                </div>
+                <div
+                  id="character-select"
+                  class="character-select"
+                  role="group"
+                  aria-label="Choose a character"
+                ></div>
+              </section>
+              <ul id="roster" class="roster"></ul>
+              <div class="room-controls">
+                <button id="leave-room" class="danger-button" type="button">
+                  Leave</button
+                ><button id="ready-room" class="primary-button" type="button">
+                  Ready up
+                </button>
+              </div>
+            </div>
+          </section>
+        </section>
+        <section id="game-view" class="game-screen" hidden>
+          <section class="panel arena-panel">
+            <header class="arena-header">
+              <div class="arena-title">
+                <span id="connection-dot" class="live-dot"></span>
+                <h2>Live arena</h2>
+                <span id="connection-label" class="connection-label"
+                  >Connecting...</span
+                >
+              </div>
+              <time id="match-time" class="match-time">03:00</time>
+            </header>
+            <div id="arena" role="grid" aria-label="BombArena game map"></div>
+            <p class="control-hint">
+              Move with <b>WASD</b> or the <b>arrow keys</b> - Place a bomb with
+              <b>Space</b>
+            </p>
+            <div class="touch-controls" aria-label="Game controls">
+              <button data-input="up" type="button" aria-label="Move up">
+                UP</button
+              ><button data-input="left" type="button" aria-label="Move left">
+                LT</button
+              ><button data-input="bomb" type="button" aria-label="Place bomb">
+                BOMB</button
+              ><button data-input="right" type="button" aria-label="Move right">
+                RT</button
+              ><button data-input="down" type="button" aria-label="Move down">
+                DN
+              </button>
+            </div>
+          </section>
+          <aside class="hud">
+            <section class="panel hud-card">
+              <h3>Combatants</h3>
+              <div id="player-list"></div>
+            </section>
+            <section class="panel hud-card">
+              <h3>Match rules</h3>
+              <div class="legend">
+                <span
+                  ><i style="background: #b56d2f"></i>Break crates for
+                  routes</span
+                ><span
+                  ><i style="background: #e95835"></i>Fire eliminates on
+                  contact</span
+                ><span
+                  ><i style="background: #1a604f"></i>Pickups increase
+                  options</span
+                >
+              </div>
+            </section>
+          </aside>
+        </section>
+      </main>
+    </div>
+    <section
+      id="result-overlay"
+      class="result-overlay"
+      hidden
+      aria-live="polite"
+    >
+      <div class="panel result-card">
+        <div id="result-icon" class="result-icon">END</div>
+        <p class="eyebrow">Match complete</p>
+        <h2 id="result-title">Arena complete</h2>
+        <p id="result-copy"></p>
+        <button id="play-again" class="primary-button" type="button">
+          Return to lobby
+        </button>
+      </div>
+    </section>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="/assets/vendor/gsap.min.js"></script>
+    <script src="/assets/vendor/ScrollTrigger.min.js"></script>
+    <script type="module">
+      import { mergeGameState } from "/game-state.js";
+      const $ = (selector) => document.querySelector(selector);
+      const motionEnabled =
+        !matchMedia("(prefers-reduced-motion: reduce)").matches && window.gsap;
+      if (motionEnabled && window.ScrollTrigger)
+        gsap.registerPlugin(ScrollTrigger);
+      const ui = {
+        accountChip: $("#account-chip"),
+        auth: $("#auth-view"),
+        lobby: $("#lobby-view"),
+        game: $("#game-view"),
+        form: $("#account-form"),
+        username: $("#username"),
+        password: $("#password"),
+        authTitle: $("#auth-title"),
+        authCopy: $("#auth-copy"),
+        authEyebrow: $("#auth-eyebrow"),
+        authSubmit: $("#auth-submit"),
+        authSwitch: $("#auth-switch"),
+        authQuestion: $("#auth-question"),
+        formError: $("#form-error"),
+        signOut: $("#sign-out"),
+        create: $("#create-room"),
+        join: $("#join-room"),
+        codeInput: $("#room-code"),
+        roomEmpty: $("#room-empty"),
+        roomActive: $("#room-active"),
+        roomCode: $("#room-code-value"),
+        roomPhase: $("#room-phase"),
+        roomState: $("#room-state"),
+        characterSelect: $("#character-select"),
+        characterStatus: $("#character-status"),
+        roster: $("#roster"),
+        copy: $("#copy-code"),
+        ready: $("#ready-room"),
+        leave: $("#leave-room"),
+        arena: $("#arena"),
+        playerList: $("#player-list"),
+        matchTime: $("#match-time"),
+        connectionLabel: $("#connection-label"),
+        connectionDot: $("#connection-dot"),
+        result: $("#result-overlay"),
+        resultIcon: $("#result-icon"),
+        resultTitle: $("#result-title"),
+        resultCopy: $("#result-copy"),
+        playAgain: $("#play-again"),
+        toast: $("#toast"),
+      };
+      let account,
+        room,
+        gameState,
+        socket,
+        pollTimer,
+        reconnectTimer,
+        pingTimer,
+        toastTimer;
+      let authMode = "login";
+      const labels = {
+        authentication_required: "Please sign in to continue.",
+        invalid_registration:
+          "Use a 3+ character name and an 8+ character password.",
+        invalid_credentials: "Account name or password is incorrect.",
+        username_unavailable: "That account name is already taken.",
+        room_not_found: "No Room was found with that code.",
+        room_full: "That Room already has four players.",
+        room_started: "That match has already started.",
+        duplicate_player: "You are already in this Room.",
+        invalid_room_code: "Room codes have exactly six characters.",
+        not_a_player: "You are not a member of that Room.",
+        blocked: "That route is blocked.",
+        occupied: "Another player is already there.",
+        action_limit: "Slow down - one move and one bomb per tick.",
+        no_available_bomb: "Your bomb is still recharging.",
+        active_bomb_limit: "Wait for your bomb to detonate.",
+        player_dead: "You have been eliminated.",
+        input_rate_limited: "Too many actions at once.",
+        character_required: "Choose a combatant before readying up.",
+        character_taken: "That combatant is already claimed.",
+        invalid_character: "That combatant is unavailable.",
+      };
+      const characters = {
+        spark: { name: "SPARK", title: "Fuse runner", color: "#18b8ff" },
+        volt: { name: "VOLT", title: "Blast skater", color: "#ff4d8d" },
+        moss: { name: "MOSS", title: "Crate breaker", color: "#7ee487" },
+        rose: { name: "ROSE", title: "Fuse tactician", color: "#ffd338" },
+      };
+      const lastActions = new Map();
+      const msg = (value) =>
+        labels[value] || value || "Something went wrong. Please try again.";
+      function notify(value, error = false) {
+        ui.toast.textContent = value;
+        ui.toast.className = `toast visible${error ? " error" : ""}`;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => (ui.toast.className = "toast"), 3500);
+      }
+      async function request(path, options = {}) {
         const response = await fetch(path, {
           ...options,
           credentials: "same-origin",
         });
-        const body = response.status === 204 ? null : await response.json();
-        if (!response.ok)
-          throw new Error(body.error || `HTTP ${response.status}`);
+        const body =
+          response.status === 204
+            ? null
+            : await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const error = new Error(body.error || `HTTP ${response.status}`);
+          error.status = response.status;
+          throw error;
+        }
         return body;
-      };
-      const setRoom = (next) => {
-        room = next;
-        roomCode.value = room.code;
-        roomText.textContent = `${room.code}: ${room.phase} (${room.players.length} Players)`;
-        show(room);
-        if (room.phase === "started") connect();
-      };
-      const connect = () => {
-        if (!room || socket) return;
-        socket = new WebSocket(
-          `${location.origin.replace("http", "ws")}/realtime?roomCode=${room.code}`,
+      }
+      function renderAccount() {
+        const signedIn = Boolean(account);
+        ui.auth.hidden = signedIn;
+        ui.lobby.hidden = !signedIn || Boolean(gameState && !gameState.outcome);
+        ui.accountChip.hidden = !signedIn;
+        ui.signOut.hidden = !signedIn;
+        ui.accountChip.textContent = account?.username || "";
+      }
+      function switchMode() {
+        authMode = authMode === "register" ? "login" : "register";
+        const login = authMode === "login";
+        ui.authEyebrow.textContent = login ? "Welcome back" : "Enter the arena";
+        ui.authTitle.textContent = login
+          ? "Sign in to play"
+          : "Create your account";
+        ui.authCopy.textContent = login
+          ? "Use your account to return to the arena."
+          : "Choose a public name and a strong password to start playing.";
+        ui.authSubmit.textContent = login ? "Sign in" : "Create account";
+        ui.authSwitch.textContent = login ? "Create one" : "Sign in";
+        ui.authQuestion.textContent = login
+          ? "New to BombArena?"
+          : "Already have an account?";
+        ui.password.autocomplete = login ? "current-password" : "new-password";
+        ui.formError.textContent = "";
+      }
+      function renderRoom() {
+        ui.roomEmpty.hidden = Boolean(room);
+        ui.roomActive.hidden = !room;
+        if (!room) return;
+        ui.roomCode.textContent = room.code;
+        ui.codeInput.value = room.code;
+        const self = room.players.find((player) => player.id === account.id);
+        const seconds = room.countdownEndsAtMs
+          ? Math.max(0, Math.ceil((room.countdownEndsAtMs - Date.now()) / 1000))
+          : 0;
+        ui.roomPhase.textContent =
+          room.phase === "countdown"
+            ? `Starting in ${seconds}s`
+            : room.phase === "started"
+              ? "Match started"
+              : "Waiting";
+        ui.roomState.textContent =
+          room.phase === "countdown"
+            ? `All combatants are ready. Launching in ${seconds}...`
+            : room.phase === "started"
+              ? "Joining the authoritative arena..."
+              : !self?.character
+                ? "Choose a combatant before you ready up."
+                : room.players.length < 2
+                  ? "Waiting for at least one more player..."
+                  : "Everyone must be ready before the match begins.";
+        ui.ready.textContent = self?.ready ? "Not ready" : "Ready up";
+        ui.ready.disabled = room.phase === "started" || !self?.character;
+        ui.leave.disabled = room.phase === "started";
+        ui.characterStatus.textContent = self?.character
+          ? `${characters[self.character].name} selected`
+          : "Pick one";
+        ui.characterSelect.replaceChildren(
+          ...Object.entries(characters).map(([id, character]) => {
+            const selected = self?.character === id;
+            const claimed = room.players.some(
+              (player) => player.id !== account.id && player.character === id,
+            );
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = `character-card${selected ? " selected" : ""}`;
+            button.dataset.character = id;
+            button.disabled = room.phase === "started" || claimed;
+            button.setAttribute("aria-pressed", String(selected));
+            const sprite = document.createElement("span");
+            sprite.className = `character-preview sprite character-${id}`;
+            sprite.setAttribute("aria-hidden", "true");
+            const details = document.createElement("span");
+            const name = document.createElement("strong");
+            const title = document.createElement("small");
+            name.textContent = character.name;
+            title.textContent = claimed ? "CLAIMED" : character.title;
+            details.append(name, title);
+            button.append(sprite, details);
+            return button;
+          }),
         );
-        socket.onmessage = ({ data }) => show(JSON.parse(data));
-        socket.onclose = () => (socket = undefined);
-      };
-
-      document
-        .querySelector("#account-form")
-        .addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const action = event.submitter.value;
+        ui.roster.replaceChildren(
+          ...Array.from({ length: 4 }, (_, index) => {
+            const player = room.players[index],
+              item = document.createElement("li");
+            item.className = `roster-slot${player ? "" : " empty"}`;
+            if (!player) {
+              item.textContent = "Open combatant slot";
+              return item;
+            }
+            const avatar = document.createElement("span"),
+              name = document.createElement("span"),
+              status = document.createElement("span");
+            avatar.className = `avatar sprite character-${player.character || "spark"}`;
+            avatar.setAttribute("aria-hidden", "true");
+            name.className = "roster-name";
+            name.textContent =
+              player.id === account.id
+                ? `${account.username} (you) · ${player.character ? characters[player.character].name : "choosing"}`
+                : player.character
+                  ? characters[player.character].name
+                  : `Combatant ${index + 1} · choosing`;
+            status.className = player.ready ? "ready-badge" : "waiting-badge";
+            status.textContent = player.ready ? "READY" : "WAITING";
+            item.append(avatar, name, status);
+            return item;
+          }),
+        );
+      }
+      function stopPolling() {
+        clearInterval(pollTimer);
+        pollTimer = undefined;
+      }
+      function startPolling() {
+        if (pollTimer || !room || room.phase === "started") return;
+        pollTimer = setInterval(async () => {
           try {
-            const account = await request(`/auth/${action}`, {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({
-                username: usernameInput.value,
-                password: passwordInput.value,
-              }),
-            });
-            accountText.textContent = `Signed in as ${account.account.username}`;
-            show(account);
+            setRoom((await request(`/rooms/${room.code}`)).room);
           } catch (error) {
-            show({ error: error.message });
+            stopPolling();
+            notify(msg(error.message), true);
           }
-        });
-      document.querySelector("#create").onclick = async () => {
+        }, 700);
+      }
+      function setRoom(next) {
+        room = next;
+        renderRoom();
+        if (room.phase === "started") {
+          stopPolling();
+          connect();
+        } else startPolling();
+      }
+      function formatTime(elapsed) {
+        const left = Math.max(0, 180000 - elapsed);
+        return `${String(Math.floor(left / 60000)).padStart(2, "0")}:${String(Math.floor((left % 60000) / 1000)).padStart(2, "0")}`;
+      }
+      function connect() {
+        if (!room || socket) return;
+        clearTimeout(reconnectTimer);
+        const query = new URLSearchParams({ roomCode: room.code });
+        if (gameState?.stateVersion !== undefined)
+          query.set("stateVersion", gameState.stateVersion);
+        const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+        socket = new WebSocket(
+          `${protocol}//${location.host}/realtime?${query}`,
+        );
+        ui.connectionLabel.textContent = "Connecting...";
+        socket.onopen = () => {
+          ui.connectionLabel.textContent = "Connected";
+          ui.connectionDot.style.background = "#41da99";
+          pingTimer = setInterval(() => sendMessage("ping", {}), 15000);
+        };
+        socket.onmessage = ({ data }) => receive(JSON.parse(data));
+        socket.onclose = () => {
+          socket = undefined;
+          clearInterval(pingTimer);
+          if (!gameState?.outcome && room?.phase === "started") {
+            ui.connectionLabel.textContent = "Reconnecting...";
+            ui.connectionDot.style.background = "#f8ba47";
+            reconnectTimer = setTimeout(connect, 1000);
+          }
+        };
+      }
+      function receive(message) {
+        const gameWasHidden = ui.game.hidden;
+        if (message.type === "delta")
+          message.payload.delta.events.forEach((event) => {
+            if (event.type === "moved" || event.type === "bombPlaced")
+              lastActions.set(event.playerId, {
+                type: event.type === "moved" ? "moving" : "placing",
+                until: Date.now() + 180,
+              });
+          });
+        gameState = mergeGameState(gameState, message);
+        if (message.type === "rejected")
+          notify(msg(message.payload.reason), true);
+        if (!gameState) return;
+        ui.game.hidden = false;
+        ui.lobby.hidden = true;
+        renderGame();
+        if (motionEnabled && gameWasHidden)
+          gsap.fromTo(
+            ui.game,
+            { autoAlpha: 0, y: 24 },
+            { autoAlpha: 1, duration: 0.42, ease: "power3.out", y: 0 },
+          );
+        if (gameState.outcome) showResult(gameState.outcome);
+      }
+      function renderGame() {
+        for (const [id, action] of lastActions)
+          if (action.until < Date.now()) lastActions.delete(id);
+        const { width, height, breakableBlocks } = gameState.map,
+          blocks = new Set(
+            breakableBlocks.map((cell) => `${cell.x},${cell.y}`),
+          ),
+          pickups = new Set(
+            gameState.pickups.map((cell) => `${cell.x},${cell.y}`),
+          ),
+          bombs = new Set(
+            gameState.bombs.map((bomb) => `${bomb.cell.x},${bomb.cell.y}`),
+          ),
+          fire = new Set(
+            gameState.fire.map((flame) => `${flame.cell.x},${flame.cell.y}`),
+          ),
+          players = new Map(
+            gameState.players.map((player, index) => [
+              `${player.cell.x},${player.cell.y}`,
+              {
+                player,
+                index,
+                character:
+                  room?.players.find((entry) => entry.id === player.id)
+                    ?.character || "spark",
+              },
+            ]),
+          );
+        ui.arena.style.gridTemplateColumns = `repeat(${width},1fr)`;
+        ui.arena.replaceChildren(
+          ...Array.from({ length: width * height }, (_, n) => {
+            const x = n % width,
+              y = Math.floor(n / width),
+              key = `${x},${y}`,
+              wall =
+                x === 0 ||
+                y === 0 ||
+                x === width - 1 ||
+                y === height - 1 ||
+                (x % 2 === 0 && y % 2 === 0),
+              tile = document.createElement("div");
+            tile.className = `tile${wall ? " wall" : ""}${blocks.has(key) ? " crate" : ""}${fire.has(key) ? " fire" : ""}${pickups.has(key) ? " pickup" : ""}${bombs.has(key) ? " bomb" : ""}`;
+            const occupant = players.get(key),
+              token = document.createElement("span");
+            if (occupant) {
+              const action = lastActions.get(occupant.player.id);
+              token.className = `token character-${occupant.character}${action ? ` is-${action.type}` : ""}${occupant.player.alive ? "" : " eliminated"}`;
+              token.setAttribute("aria-label", "Combatant");
+            } else if (fire.has(key)) {
+              token.className = "token fire-token";
+              token.setAttribute("aria-label", "Blast fire");
+            } else if (bombs.has(key)) {
+              token.className = "token bomb-token";
+              token.setAttribute("aria-label", "Bomb");
+            } else if (pickups.has(key)) {
+              token.className = "token pickup-token";
+              token.setAttribute("aria-label", "Bomb pickup");
+            }
+            if (token.className) {
+              token.setAttribute("role", "img");
+              tile.append(token);
+            }
+            return tile;
+          }),
+        );
+        ui.matchTime.textContent = formatTime(gameState.elapsedMs);
+        ui.playerList.replaceChildren(
+          ...gameState.players.map((player, index) => {
+            const card = document.createElement("div"),
+              color = document.createElement("span"),
+              meta = document.createElement("div"),
+              name = document.createElement("strong"),
+              state = document.createElement("small"),
+              stats = document.createElement("span");
+            card.className = "player-card";
+            color.className = "player-color";
+            const character =
+              room?.players.find((entry) => entry.id === player.id)
+                ?.character || "spark";
+            color.style.background = characters[character].color;
+            meta.className = "player-meta";
+            name.textContent =
+              player.id === account.id
+                ? `${account.username} · ${characters[character].name}`
+                : `${characters[character].name} · Combatant ${index + 1}`;
+            state.textContent = player.alive ? "In the arena" : "Eliminated";
+            meta.append(name, state);
+            stats.className = "player-stats";
+            stats.textContent = `B ${player.availableBombs}${player.activeBombs ? `\n+${player.activeBombs}` : ""}`;
+            card.append(color, meta, stats);
+            return card;
+          }),
+        );
+      }
+      function showResult(outcome) {
+        const wasHidden = ui.result.hidden;
+        const won =
+          outcome.kind === "winner" && outcome.playerId === account.id;
+        ui.resultIcon.textContent = won
+          ? "WIN"
+          : outcome.kind === "draw"
+            ? "DRAW"
+            : "END";
+        ui.resultTitle.textContent = won
+          ? "You own the arena"
+          : outcome.kind === "draw"
+            ? "Arena draw"
+            : "Match complete";
+        ui.resultCopy.textContent = won
+          ? "Outstanding work. Your rival could not outlast your strategy."
+          : outcome.kind === "draw"
+            ? "No combatant survived the final blast."
+            : "A rival claimed this arena. Queue another Room to try again.";
+        ui.result.hidden = false;
+        if (motionEnabled && wasHidden)
+          gsap.fromTo(
+            ".result-card",
+            { autoAlpha: 0, scale: 0.82, y: 18 },
+            {
+              autoAlpha: 1,
+              duration: 0.34,
+              ease: "back.out(1.7)",
+              scale: 1,
+              y: 0,
+            },
+          );
+      }
+      function sendMessage(type, payload) {
+        if (socket?.readyState === WebSocket.OPEN)
+          socket.send(
+            JSON.stringify({
+              version: 1,
+              type,
+              requestId: crypto.randomUUID(),
+              payload,
+            }),
+          );
+      }
+      function sendInput(action) {
+        sendMessage(
+          "input",
+          action === "bomb"
+            ? { type: "placeBomb" }
+            : { type: "move", direction: action },
+        );
+      }
+      function reset() {
+        ui.result.hidden = true;
+        ui.game.hidden = true;
+        gameState = undefined;
+        room = undefined;
+        renderRoom();
+        renderAccount();
+      }
+      ui.form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        ui.formError.textContent = "";
+        ui.authSubmit.disabled = true;
+        try {
+          const body = await request(`/auth/${authMode}`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              username: ui.username.value,
+              password: ui.password.value,
+            }),
+          });
+          account = body.account;
+          ui.password.value = "";
+          renderAccount();
+          notify(`Welcome, ${account.username}.`);
+        } catch (error) {
+          ui.formError.textContent = msg(error.message);
+        } finally {
+          ui.authSubmit.disabled = false;
+        }
+      });
+      ui.authSwitch.onclick = switchMode;
+      ui.create.onclick = async () => {
         try {
           setRoom((await request("/rooms", { method: "POST" })).room);
+          notify("Room created. Share the code with your friends.");
         } catch (error) {
-          show({ error: error.message });
+          notify(msg(error.message), true);
         }
       };
-      document.querySelector("#join").onclick = async () => {
+      ui.join.onclick = async () => {
         try {
           setRoom(
-            (await request(`/rooms/${roomCode.value}/join`, { method: "POST" }))
-              .room,
+            (
+              await request(
+                `/rooms/${encodeURIComponent(ui.codeInput.value.trim().toUpperCase())}/join`,
+                { method: "POST" },
+              )
+            ).room,
           );
+          notify("You joined the Room.");
         } catch (error) {
-          show({ error: error.message });
+          notify(msg(error.message), true);
         }
       };
-      document.querySelector("#ready").onclick = async () => {
+      ui.codeInput.oninput = () =>
+        (ui.codeInput.value = ui.codeInput.value
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, ""));
+      ui.characterSelect.onclick = async (event) => {
+        const button = event.target.closest("[data-character]");
+        if (!room || !button || button.disabled) return;
+        try {
+          setRoom(
+            (
+              await request(`/rooms/${room.code}/character`, {
+                method: "PUT",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ character: button.dataset.character }),
+              })
+            ).room,
+          );
+        } catch (error) {
+          notify(msg(error.message), true);
+        }
+      };
+      ui.ready.onclick = async () => {
+        if (!room) return;
+        const self = room.players.find((player) => player.id === account.id);
+        try {
+          setRoom(
+            (
+              await request(
+                `/rooms/${room.code}/${self?.ready ? "unready" : "ready"}`,
+                { method: "POST" },
+              )
+            ).room,
+          );
+        } catch (error) {
+          notify(msg(error.message), true);
+        }
+      };
+      ui.leave.onclick = async () => {
         if (!room) return;
         try {
-          setRoom(
-            (await request(`/rooms/${room.code}/ready`, { method: "POST" }))
-              .room,
-          );
+          await request(`/rooms/${room.code}/leave`, { method: "POST" });
+          room = undefined;
+          stopPolling();
+          renderRoom();
+          notify("You left the Room.");
         } catch (error) {
-          show({ error: error.message });
+          notify(msg(error.message), true);
         }
       };
+      ui.copy.onclick = async () => {
+        if (!room) return;
+        try {
+          await navigator.clipboard.writeText(room.code);
+          notify("Room code copied.");
+        } catch {
+          notify(`Room code: ${room.code}`);
+        }
+      };
+      ui.signOut.onclick = async () => {
+        try {
+          await request("/auth/logout", { method: "POST" });
+        } catch {}
+        account = undefined;
+        room = undefined;
+        gameState = undefined;
+        stopPolling();
+        socket?.close();
+        renderRoom();
+        renderAccount();
+      };
+      ui.playAgain.onclick = reset;
+      document
+        .querySelectorAll("[data-input]")
+        .forEach(
+          (button) => (button.onclick = () => sendInput(button.dataset.input)),
+        );
+      document.addEventListener("keydown", (event) => {
+        if (event.target instanceof HTMLInputElement) return;
+        const action = {
+          ArrowUp: "up",
+          w: "up",
+          W: "up",
+          ArrowLeft: "left",
+          a: "left",
+          A: "left",
+          ArrowRight: "right",
+          d: "right",
+          D: "right",
+          ArrowDown: "down",
+          s: "down",
+          S: "down",
+          " ": "bomb",
+        }[event.key];
+        if (!action || !gameState || gameState.outcome) return;
+        event.preventDefault();
+        sendInput(action);
+      });
+      setInterval(() => room?.phase === "countdown" && renderRoom(), 250);
+      if (motionEnabled) {
+        gsap.from(".topbar, .hero-copy, .auth-card", {
+          autoAlpha: 0,
+          duration: 0.55,
+          ease: "power2.out",
+          stagger: 0.08,
+          y: 16,
+        });
+        ScrollTrigger.batch(
+          ".lobby-intro, .room-panel, .arena-panel, .hud-card",
+          {
+            onEnter: (items) =>
+              gsap.fromTo(
+                items,
+                { autoAlpha: 0, y: 18 },
+                {
+                  autoAlpha: 1,
+                  duration: 0.45,
+                  ease: "power2.out",
+                  stagger: 0.06,
+                },
+              ),
+            start: "top 88%",
+          },
+        );
+      }
+      (async () => {
+        try {
+          account = (await request("/auth/session")).account;
+          renderAccount();
+        } catch (error) {
+          if (error.status !== 401)
+            notify("Could not restore your session.", true);
+        }
+      })();
     </script>
   </body>
 </html>

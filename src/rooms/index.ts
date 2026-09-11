@@ -2,10 +2,16 @@ import { randomBytes } from "node:crypto";
 
 export const ROOM_CAPACITY = 4;
 export const ROOM_COUNTDOWN_MS = 3_000;
+export const CHARACTER_IDS = ["spark", "volt", "moss", "rose"] as const;
+export type CharacterId = (typeof CHARACTER_IDS)[number];
 
 export type RoomPhase = "waiting" | "countdown" | "started";
 export type Clock = () => number;
-export type RoomPlayer = Readonly<{ id: string; ready: boolean }>;
+export type RoomPlayer = Readonly<{
+  id: string;
+  ready: boolean;
+  character?: CharacterId;
+}>;
 export type PendingGameStart = Readonly<{
   roomCode: string;
   playerIds: readonly string[];
@@ -26,7 +32,10 @@ export type RoomErrorCode =
   | "duplicate_player"
   | "room_full"
   | "room_started"
-  | "not_a_player";
+  | "not_a_player"
+  | "invalid_character"
+  | "character_taken"
+  | "character_required";
 
 export class RoomError extends Error {
   public constructor(public readonly code: RoomErrorCode) {
@@ -36,7 +45,10 @@ export class RoomError extends Error {
 }
 
 export class Room {
-  private readonly players = new Map<string, boolean>();
+  private readonly players = new Map<
+    string,
+    { ready: boolean; character?: CharacterId }
+  >();
   private phase: RoomPhase = "waiting";
   private countdownEndsAtMs: number | undefined;
   private pendingGameStart: PendingGameStart | undefined;
@@ -47,7 +59,7 @@ export class Room {
     private readonly clock: Clock,
   ) {
     assertPlayerId(creatorId);
-    this.players.set(creatorId, false);
+    this.players.set(creatorId, { ready: false });
   }
 
   public join(playerId: string): RoomSnapshot {
@@ -56,7 +68,7 @@ export class Room {
     assertPlayerId(playerId);
     if (this.players.has(playerId)) throw new RoomError("duplicate_player");
     if (this.players.size === ROOM_CAPACITY) throw new RoomError("room_full");
-    this.players.set(playerId, false);
+    this.players.set(playerId, { ready: false });
     this.reconcile(true);
     return this.snapshot();
   }
@@ -65,8 +77,33 @@ export class Room {
     this.reconcile();
     this.assertNotStarted();
     if (!this.players.has(playerId)) throw new RoomError("not_a_player");
-    if (this.players.get(playerId) === ready) return this.snapshot();
-    this.players.set(playerId, ready);
+    const player = this.players.get(playerId)!;
+    if (ready && player.character === undefined)
+      throw new RoomError("character_required");
+    if (player.ready === ready) return this.snapshot();
+    player.ready = ready;
+    this.reconcile(true);
+    return this.snapshot();
+  }
+
+  public selectCharacter(
+    playerId: string,
+    character: CharacterId,
+  ): RoomSnapshot {
+    this.reconcile();
+    this.assertNotStarted();
+    if (!this.players.has(playerId)) throw new RoomError("not_a_player");
+    if (!CHARACTER_IDS.includes(character))
+      throw new RoomError("invalid_character");
+    if (
+      [...this.players.entries()].some(
+        ([id, player]) => id !== playerId && player.character === character,
+      )
+    )
+      throw new RoomError("character_taken");
+    const player = this.players.get(playerId)!;
+    player.character = character;
+    player.ready = false;
     this.reconcile(true);
     return this.snapshot();
   }
@@ -89,7 +126,13 @@ export class Room {
       code: this.code,
       creatorId: this.creatorId,
       phase: this.phase,
-      players: [...this.players].map(([id, ready]) => ({ id, ready })),
+      players: [...this.players].map(([id, player]) => ({
+        id,
+        ready: player.ready,
+        ...(player.character === undefined
+          ? {}
+          : { character: player.character }),
+      })),
       ...(this.countdownEndsAtMs === undefined
         ? {}
         : { countdownEndsAtMs: this.countdownEndsAtMs }),
@@ -102,7 +145,8 @@ export class Room {
   private reconcile(restartCountdown = false): void {
     if (this.phase === "started") return;
     const eligible =
-      this.players.size >= 2 && [...this.players.values()].every(Boolean);
+      this.players.size >= 2 &&
+      [...this.players.values()].every((player) => player.ready);
     if (!eligible) {
       this.phase = "waiting";
       this.countdownEndsAtMs = undefined;
@@ -179,11 +223,11 @@ function assertPlayerId(playerId: string): void {
 function normalizeRoomCode(code: string): string {
   if (typeof code !== "string") throw new RoomError("invalid_room_code");
   const normalized = code.trim().toUpperCase();
-  if (!/^[A-Z0-9]{6,12}$/.test(normalized))
+  if (!/^[A-Z0-9]{6}$/.test(normalized))
     throw new RoomError("invalid_room_code");
   return normalized;
 }
 
 function defaultRoomCode(): string {
-  return randomBytes(4).toString("hex").toUpperCase();
+  return randomBytes(3).toString("hex").toUpperCase();
 }

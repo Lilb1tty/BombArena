@@ -32,6 +32,25 @@ test("authentication attempts are allowed only while both fixed windows remain i
   assert.equal(isAuthenticationAttemptAllowed(1, AUTH_RATE_LIMIT + 1), false);
 });
 
+test("authentication startup rejects when Redis is unavailable", async () => {
+  const originalRedisUrl = process.env.REDIS_URL;
+  process.env.REDIS_URL = "redis://127.0.0.1:1";
+
+  try {
+    const result = await Promise.race([
+      createAuthenticationRuntime().then(
+        () => "resolved",
+        () => "rejected",
+      ),
+      new Promise<string>((resolve) => setTimeout(resolve, 250, "timed_out")),
+    ]);
+    assert.equal(result, "rejected");
+  } finally {
+    if (originalRedisUrl === undefined) delete process.env.REDIS_URL;
+    else process.env.REDIS_URL = originalRedisUrl;
+  }
+});
+
 test("Account HTTP flow uses real MySQL and Redis when available", async (context) => {
   let authentication;
   try {

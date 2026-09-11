@@ -4,13 +4,27 @@ import {
   requireAuthentication,
   type AuthenticationDependencies,
 } from "./auth.js";
-import { RoomDirectory, RoomError } from "./rooms/index.js";
+import {
+  CHARACTER_IDS,
+  RoomDirectory,
+  RoomError,
+  type CharacterId,
+} from "./rooms/index.js";
 
 export function roomRoutes(
   authentication: AuthenticationDependencies,
   rooms: RoomDirectory,
 ): RequestHandler[] {
   return [
+    requireAuthentication(authentication, (request, response) => {
+      respondWithRoom(response, () =>
+        requireRoomMember(
+          rooms,
+          roomCode(request.params.roomCode),
+          request.authenticatedAccount.id,
+        ),
+      );
+    }),
     requireAuthentication(authentication, (request, response) => {
       const room = rooms.create(request.authenticatedAccount.id);
       response.status(201).json({ room: room.snapshot() });
@@ -22,6 +36,20 @@ export function roomRoutes(
           request.authenticatedAccount.id,
         ),
       );
+    }),
+    requireAuthentication(authentication, (request, response) => {
+      respondWithRoom(response, () => {
+        const room = requireRoomMember(
+          rooms,
+          roomCode(request.params.roomCode),
+          request.authenticatedAccount.id,
+        );
+        room.selectCharacter(
+          request.authenticatedAccount.id,
+          characterId(request.body?.character),
+        );
+        return room;
+      });
     }),
     requireAuthentication(authentication, (request, response) => {
       respondWithRoom(response, () => {
@@ -54,6 +82,12 @@ export function roomRoutes(
       });
     }),
   ];
+}
+
+function characterId(value: unknown): CharacterId {
+  if (typeof value === "string" && CHARACTER_IDS.includes(value as CharacterId))
+    return value as CharacterId;
+  throw new RoomError("invalid_character");
 }
 
 function roomCode(value: string | string[] | undefined): string {
@@ -94,6 +128,7 @@ function roomErrorStatus(error: RoomError): number {
     case "duplicate_player":
     case "room_full":
     case "room_started":
+    case "character_taken":
       return 409;
     default:
       return 400;

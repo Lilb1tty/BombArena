@@ -51,7 +51,7 @@ export async function createAuthenticationRuntime(): Promise<AuthenticationRunti
   try {
     await Promise.all([prisma.$connect(), redis.connect()]);
   } catch (error) {
-    await Promise.allSettled([prisma.$disconnect(), redis.quit()]);
+    await Promise.allSettled([prisma.$disconnect(), closeRedis(redis)]);
     throw error;
   }
 
@@ -59,9 +59,14 @@ export async function createAuthenticationRuntime(): Promise<AuthenticationRunti
     prisma,
     redis,
     async close() {
-      await Promise.allSettled([prisma.$disconnect(), redis.quit()]);
+      await Promise.allSettled([prisma.$disconnect(), closeRedis(redis)]);
     },
   };
+}
+
+async function closeRedis(redis: Redis): Promise<void> {
+  if (redis.isOpen) await redis.close();
+  else redis.destroy();
 }
 
 export function authenticationRoutes(
