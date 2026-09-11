@@ -2,7 +2,11 @@
 
 BombArena is an authoritative real-time multiplayer arena-game service. It
 includes Account sessions, Rooms, deterministic Games, restricted Game Results,
-and a small browser demonstration client.
+and a browser client with pixel-art Players and arena blocks.
+
+## Play online
+
+Try it now: [arena.lil-bitty.com](https://arena.lil-bitty.com/)
 
 ## Run locally
 
@@ -32,8 +36,9 @@ committed Prisma migrations with `prisma migrate deploy`, then listens on port 3
 
 ## Launch and play
 
-1. Start the complete stack with `docker compose up --build` (or run MySQL and
-   Redis locally, apply `npm run db:migrate`, then use `npm run dev`).
+1. Open [arena.lil-bitty.com](https://arena.lil-bitty.com/) to play online, or
+   start the complete local stack with `docker compose up --build` (or run
+   MySQL and Redis locally, apply `npm run db:migrate`, then use `npm run dev`).
 2. Register two to four Accounts in separate browser profiles (or with an HTTP
    client). One Account creates a Room; the other Accounts join with its Room
    Code, then every Player readies.
