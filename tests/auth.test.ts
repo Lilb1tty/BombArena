@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { once } from "node:events";
+import { request as httpRequest } from "node:http";
 import test from "node:test";
 
 import { createApp } from "../src/app.js";
@@ -70,7 +71,7 @@ test("Account HTTP flow uses real MySQL and Redis when available", async (contex
   }
 
   const results = new GameResultQueryService(authentication.prisma);
-  const server = createApp({ authentication, results }).listen(0, "127.0.0.1");
+  const server = createApp({ authentication, results }).listen(0, "0.0.0.0");
   await once(server, "listening");
   const address = server.address();
   assert.notEqual(address, null);
@@ -194,6 +195,34 @@ test("Account HTTP flow uses real MySQL and Redis when available", async (contex
       (await aggregates.json()).aggregates.completedGames >= 1,
       true,
     );
+
+    const ipLimitedUsername = `ip${randomUUID().replaceAll("-", "").slice(0, 12)}`;
+    for (let attempt = 0; attempt <= AUTH_RATE_LIMIT; attempt += 1) {
+      const limited = await jsonRequestFrom(
+        baseUrl,
+        "/auth/login",
+        { username: `${ipLimitedUsername}${attempt}`, password: "short" },
+        "127.0.0.2",
+      );
+      assert.equal(
+        limited.response.status,
+        attempt === AUTH_RATE_LIMIT ? 429 : 401,
+      );
+    }
+
+    const usernameLimited = `name${randomUUID().replaceAll("-", "").slice(0, 12)}`;
+    for (let attempt = 0; attempt <= AUTH_RATE_LIMIT; attempt += 1) {
+      const limited = await jsonRequestFrom(
+        baseUrl,
+        "/auth/login",
+        { username: usernameLimited, password: "short" },
+        `127.0.0.${attempt + 10}`,
+      );
+      assert.equal(
+        limited.response.status,
+        attempt === AUTH_RATE_LIMIT ? 429 : 401,
+      );
+    }
   } finally {
     server.close();
     await once(server, "close");
@@ -215,6 +244,47 @@ async function jsonRequest(
     body: JSON.stringify(body),
   });
   return { response, body: await response.json() };
+}
+
+async function jsonRequestFrom(
+  baseUrl: string,
+  path: string,
+  body: Record<string, string>,
+  localAddress: string,
+): Promise<{
+  response: { status: number };
+  body: { error?: string };
+}> {
+  const url = new URL(path, baseUrl);
+  const payload = JSON.stringify(body);
+  return new Promise((resolve, reject) => {
+    const request = httpRequest(
+      {
+        hostname: url.hostname,
+        port: url.port,
+        path: url.pathname,
+        method: "POST",
+        localAddress,
+        headers: {
+          "content-type": "application/json",
+          "content-length": Buffer.byteLength(payload),
+        },
+      },
+      (response) => {
+        let data = "";
+        response.setEncoding("utf8");
+        response.on("data", (chunk) => (data += chunk));
+        response.on("end", () =>
+          resolve({
+            response: { status: response.statusCode ?? 0 },
+            body: JSON.parse(data),
+          }),
+        );
+      },
+    );
+    request.on("error", reject);
+    request.end(payload);
+  });
 }
 
 function loginCookie(response: Response): string {

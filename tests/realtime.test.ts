@@ -9,7 +9,11 @@ import WebSocket from "ws";
 import { createApp } from "../src/app.js";
 import { createAuthenticationRuntime } from "../src/auth.js";
 import { MAP_VERSION } from "../src/game/map.js";
-import { RealtimeRuntime } from "../src/realtime/index.js";
+import { RECONNECT_WINDOW_MS, RealtimeRuntime } from "../src/realtime/index.js";
+import {
+  GameResultQueryService,
+  GameResultWriter,
+} from "../src/results/index.js";
 
 test("Room HTTP actions and real-time Game snapshots use an authenticated boundary", async (context) => {
   let authentication;
@@ -25,9 +29,24 @@ test("Room HTTP actions and real-time Game snapshots use an authenticated bounda
     return;
   }
 
-  const realtime = new RealtimeRuntime({ authentication });
+  let now = Date.now();
+  let abortedResultId: string | undefined;
+  const resultWriter = new GameResultWriter(authentication.prisma);
+  const realtime = new RealtimeRuntime({
+    authentication,
+    now: () => now,
+    recordResult: async (result) => {
+      const recorded = await resultWriter.record(result);
+      if (result.status === "aborted") abortedResultId = recorded.id;
+      return recorded;
+    },
+  });
   const server = createServer(
-    createApp({ authentication, rooms: realtime.rooms }),
+    createApp({
+      authentication,
+      rooms: realtime.rooms,
+      results: new GameResultQueryService(authentication.prisma),
+    }),
   );
   realtime.attach(server);
   server.listen(0, "127.0.0.1");
@@ -89,6 +108,26 @@ test("Room HTTP actions and real-time Game snapshots use an authenticated bounda
       409,
     );
     assert.equal(
+      await rejectedUpgrade(
+        `ws://127.0.0.1:${address.port}/realtime?roomCode=${roomCode}`,
+      ),
+      401,
+    );
+    assert.equal(
+      await rejectedUpgrade(
+        `ws://127.0.0.1:${address.port}/realtime?roomCode=${roomCode}&stateVersion=nope`,
+        first.cookie,
+      ),
+      400,
+    );
+    assert.equal(
+      await rejectedUpgrade(
+        `ws://127.0.0.1:${address.port}/realtime?roomCode=${roomCode}`,
+        fifth.cookie,
+      ),
+      403,
+    );
+    assert.equal(
       (await selectCharacter(baseUrl, roomCode, first.cookie, "spark")).status,
       200,
     );
@@ -141,6 +180,21 @@ test("Room HTTP actions and real-time Game snapshots use an authenticated bounda
       socket.send(
         JSON.stringify({
           version: 1,
+          type: "ping",
+          requestId: "ping-1",
+          payload: {},
+        }),
+      );
+      assert.deepEqual(await nextMessage(socket), {
+        version: 1,
+        type: "pong",
+        requestId: "ping-1",
+        payload: {},
+      });
+
+      socket.send(
+        JSON.stringify({
+          version: 1,
           type: "input",
           requestId: "invalid-input",
           payload: { type: "move", direction: "right", x: 99 },
@@ -170,8 +224,27 @@ test("Room HTTP actions and real-time Game snapshots use an authenticated bounda
         true,
       );
 
+      const rateLimitedInput = nextMessage(socket);
+      for (let input = 0; input <= 20; input += 1) {
+        socket.send(
+          JSON.stringify({
+            version: 1,
+            type: "input",
+            requestId: `input-${input}`,
+            payload: { type: "move", direction: "right" },
+          }),
+        );
+      }
+      assert.deepEqual(await rateLimitedInput, {
+        version: 1,
+        type: "rejected",
+        requestId: "input-20",
+        payload: { reason: "input_rate_limited" },
+      });
+
       socket.close();
       await once(socket, "close");
+      realtime.tick();
       const [reconnected, reconnectInitialMessage] = await openSocket(
         `ws://127.0.0.1:${address.port}/realtime?roomCode=${roomCode}&stateVersion=${snapshot.payload.snapshot.stateVersion}`,
         first.cookie,
@@ -180,7 +253,7 @@ test("Room HTTP actions and real-time Game snapshots use an authenticated bounda
         const reconnectSnapshot = await reconnectInitialMessage;
         assert.equal(reconnectSnapshot.type, "snapshot");
         assert.equal(
-          reconnectSnapshot.payload.snapshot.stateVersion >=
+          reconnectSnapshot.payload.snapshot.stateVersion >
             snapshot.payload.snapshot.stateVersion,
           true,
         );
@@ -188,13 +261,42 @@ test("Room HTTP actions and real-time Game snapshots use an authenticated bounda
         reconnected.close();
         await once(reconnected, "close");
       }
+
+      now += RECONNECT_WINDOW_MS + 1;
+      const [expiredReconnect, expiredMessage] = await openSocket(
+        `ws://127.0.0.1:${address.port}/realtime?roomCode=${roomCode}`,
+        first.cookie,
+      );
+      const expired = await expiredMessage;
+      assert.deepEqual(
+        {
+          version: 1,
+          type: "rejected",
+          requestId: expired.requestId,
+          payload: { reason: "reconnect_window_expired" },
+        },
+        expired,
+      );
+      await once(expiredReconnect, "close");
     } finally {
       if (socket.readyState === WebSocket.OPEN) {
         socket.close();
         await once(socket, "close");
       }
     }
+    await realtime.close();
+    assert.notEqual(abortedResultId, undefined);
+    const abortedResult = await fetch(
+      `${baseUrl}/game-results/${abortedResultId}`,
+      { headers: { Cookie: first.cookie } },
+    );
+    assert.equal(abortedResult.status, 200);
+    assert.deepEqual((await abortedResult.json()).gameResult.outcome, {
+      kind: "aborted",
+      reason: "runtime_shutdown",
+    });
   } finally {
+    await realtime.close();
     server.close();
     await once(server, "close");
     await authentication.close();
@@ -214,6 +316,15 @@ async function register(baseUrl: string): Promise<{ cookie: string }> {
   const cookie = response.headers.get("set-cookie");
   assert.notEqual(cookie, null);
   return { cookie: cookie.split(";", 1)[0] };
+}
+
+async function rejectedUpgrade(url: string, cookie?: string): Promise<number> {
+  const socket = new WebSocket(
+    url,
+    cookie === undefined ? undefined : { headers: { Cookie: cookie } },
+  );
+  const [, response] = await once(socket, "unexpected-response");
+  return response.statusCode;
 }
 
 async function post(
