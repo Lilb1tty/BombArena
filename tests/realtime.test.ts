@@ -127,6 +127,18 @@ test("Room HTTP actions and real-time Game snapshots use an authenticated bounda
       ),
       403,
     );
+    const revoked = await fetch(`${baseUrl}/auth/logout`, {
+      method: "POST",
+      headers: { Cookie: fifth.cookie },
+    });
+    assert.equal(revoked.status, 204);
+    assert.equal(
+      await rejectedUpgrade(
+        `ws://127.0.0.1:${address.port}/realtime?roomCode=${roomCode}`,
+        fifth.cookie,
+      ),
+      401,
+    );
     assert.equal(
       (await selectCharacter(baseUrl, roomCode, first.cookie, "spark")).status,
       200,
