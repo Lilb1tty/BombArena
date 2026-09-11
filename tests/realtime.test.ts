@@ -79,12 +79,12 @@ test("Room HTTP actions and real-time Game snapshots use an authenticated bounda
 
     await waitFor(() => realtime.tick(), 3_100);
 
-    const socket = await openSocket(
+    const [socket, initialMessage] = await openSocket(
       `ws://127.0.0.1:${address.port}/realtime?roomCode=${roomCode}`,
       first.cookie,
     );
     try {
-      const snapshot = await nextMessage(socket);
+      const snapshot = await initialMessage;
       assert.equal(snapshot.type, "snapshot");
       assert.equal(snapshot.version, 1);
       assert.equal(typeof snapshot.requestId, "string");
@@ -172,10 +172,14 @@ async function selectCharacter(
   });
 }
 
-async function openSocket(url: string, cookie: string): Promise<WebSocket> {
+async function openSocket(
+  url: string,
+  cookie: string,
+): Promise<[WebSocket, Promise<any>]> {
   const socket = new WebSocket(url, { headers: { Cookie: cookie } });
+  const initialMessage = nextMessage(socket);
   await once(socket, "open");
-  return socket;
+  return [socket, initialMessage];
 }
 
 async function nextMessage(socket: WebSocket): Promise<any> {
