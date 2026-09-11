@@ -8,6 +8,7 @@ import WebSocket from "ws";
 
 import { createApp } from "../src/app.js";
 import { createAuthenticationRuntime } from "../src/auth.js";
+import { MAP_VERSION } from "../src/game/map.js";
 import { RealtimeRuntime } from "../src/realtime/index.js";
 
 test("Room HTTP actions and real-time Game snapshots use an authenticated boundary", async (context) => {
@@ -88,7 +89,7 @@ test("Room HTTP actions and real-time Game snapshots use an authenticated bounda
       assert.equal(snapshot.type, "snapshot");
       assert.equal(snapshot.version, 1);
       assert.equal(typeof snapshot.requestId, "string");
-      assert.equal(snapshot.payload.snapshot.map.version, 1);
+      assert.equal(snapshot.payload.snapshot.map.version, MAP_VERSION);
 
       socket.send(
         JSON.stringify({
