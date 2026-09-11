@@ -58,7 +58,8 @@ test("Room HTTP actions and real-time Game snapshots use an authenticated bounda
     assert.equal((await roomRead.json()).room.code, roomCode);
 
     assert.equal(
-      (await post(baseUrl, `/rooms/INVALID`, second.cookie)).response.status,
+      (await post(baseUrl, `/rooms/INVALID/join`, second.cookie)).response
+        .status,
       400,
     );
     assert.equal(
