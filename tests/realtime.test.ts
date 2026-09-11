@@ -40,6 +40,9 @@ test("Room HTTP actions and real-time Game snapshots use an authenticated bounda
   try {
     const first = await register(baseUrl);
     const second = await register(baseUrl);
+    const third = await register(baseUrl);
+    const fourth = await register(baseUrl);
+    const fifth = await register(baseUrl);
 
     const unauthenticated = await fetch(`${baseUrl}/rooms`, { method: "POST" });
     assert.equal(unauthenticated.status, 401);
@@ -55,9 +58,34 @@ test("Room HTTP actions and real-time Game snapshots use an authenticated bounda
     assert.equal((await roomRead.json()).room.code, roomCode);
 
     assert.equal(
+      (await post(baseUrl, `/rooms/INVALID`, second.cookie)).response.status,
+      400,
+    );
+    assert.equal(
+      (await post(baseUrl, `/rooms/${roomCode}/join`, first.cookie)).response
+        .status,
+      409,
+    );
+
+    assert.equal(
       (await post(baseUrl, `/rooms/${roomCode}/join`, second.cookie)).response
         .status,
       200,
+    );
+    assert.equal(
+      (await post(baseUrl, `/rooms/${roomCode}/join`, third.cookie)).response
+        .status,
+      200,
+    );
+    assert.equal(
+      (await post(baseUrl, `/rooms/${roomCode}/join`, fourth.cookie)).response
+        .status,
+      200,
+    );
+    assert.equal(
+      (await post(baseUrl, `/rooms/${roomCode}/join`, fifth.cookie)).response
+        .status,
+      409,
     );
     assert.equal(
       (await selectCharacter(baseUrl, roomCode, first.cookie, "spark")).status,
@@ -68,12 +96,30 @@ test("Room HTTP actions and real-time Game snapshots use an authenticated bounda
       200,
     );
     assert.equal(
+      (await selectCharacter(baseUrl, roomCode, third.cookie, "moss")).status,
+      200,
+    );
+    assert.equal(
+      (await selectCharacter(baseUrl, roomCode, fourth.cookie, "rose")).status,
+      200,
+    );
+    assert.equal(
       (await post(baseUrl, `/rooms/${roomCode}/ready`, first.cookie)).response
         .status,
       200,
     );
     assert.equal(
       (await post(baseUrl, `/rooms/${roomCode}/ready`, second.cookie)).response
+        .status,
+      200,
+    );
+    assert.equal(
+      (await post(baseUrl, `/rooms/${roomCode}/ready`, third.cookie)).response
+        .status,
+      200,
+    );
+    assert.equal(
+      (await post(baseUrl, `/rooms/${roomCode}/ready`, fourth.cookie)).response
         .status,
       200,
     );
@@ -122,9 +168,30 @@ test("Room HTTP actions and real-time Game snapshots use an authenticated bounda
           snapshot.payload.snapshot.stateVersion,
         true,
       );
-    } finally {
+
       socket.close();
       await once(socket, "close");
+      const [reconnected, reconnectInitialMessage] = await openSocket(
+        `ws://127.0.0.1:${address.port}/realtime?roomCode=${roomCode}&stateVersion=${snapshot.payload.snapshot.stateVersion}`,
+        first.cookie,
+      );
+      try {
+        const reconnectSnapshot = await reconnectInitialMessage;
+        assert.equal(reconnectSnapshot.type, "snapshot");
+        assert.equal(
+          reconnectSnapshot.payload.snapshot.stateVersion >=
+            snapshot.payload.snapshot.stateVersion,
+          true,
+        );
+      } finally {
+        reconnected.close();
+        await once(reconnected, "close");
+      }
+    } finally {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.close();
+        await once(socket, "close");
+      }
     }
   } finally {
     server.close();

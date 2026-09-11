@@ -10,6 +10,10 @@ import {
   isAuthenticationAttemptAllowed,
 } from "../src/auth/rate-limit.js";
 import {
+  GameResultQueryService,
+  GameResultWriter,
+} from "../src/results/index.js";
+import {
   isAcceptablePassword,
   normalizeUsername,
 } from "../src/auth/validation.js";
@@ -65,7 +69,8 @@ test("Account HTTP flow uses real MySQL and Redis when available", async (contex
     return;
   }
 
-  const server = createApp({ authentication }).listen(0, "127.0.0.1");
+  const results = new GameResultQueryService(authentication.prisma);
+  const server = createApp({ authentication, results }).listen(0, "127.0.0.1");
   await once(server, "listening");
   const address = server.address();
   assert.notEqual(address, null);
@@ -86,6 +91,8 @@ test("Account HTTP flow uses real MySQL and Redis when available", async (contex
         username,
       },
     });
+    const firstAccount = registration.body.account;
+    assert.ok(firstAccount);
     const firstCookie = loginCookie(registration.response);
     assert.match(firstCookie, /HttpOnly/);
     assert.match(firstCookie, /Secure/);
@@ -140,6 +147,53 @@ test("Account HTTP flow uses real MySQL and Redis when available", async (contex
       headers: { Cookie: cookieValue(secondCookie) },
     });
     assert.equal(concurrentSession.status, 200);
+
+    const opponent = await jsonRequest(baseUrl, "/auth/register", {
+      username: `opponent${randomUUID().replaceAll("-", "").slice(0, 10)}`,
+      password,
+    });
+    assert.equal(opponent.response.status, 201);
+    assert.ok(opponent.body.account);
+    const gameResult = await new GameResultWriter(authentication.prisma).record(
+      {
+        status: "completed",
+        roomCode: "RESULT",
+        gameSeed: 1,
+        mapVersion: "arena-v1",
+        durationMs: 1_000,
+        outcome: {
+          kind: "winner",
+          playerId: firstAccount.id,
+          reason: "elimination",
+        },
+        participants: [
+          { accountId: firstAccount.id, outcome: "won", kills: 1 },
+          { accountId: opponent.body.account.id, outcome: "lost", kills: 0 },
+        ],
+      },
+    );
+    const participantDetail = await fetch(
+      `${baseUrl}/game-results/${gameResult.id}`,
+      { headers: { Cookie: cookieValue(secondCookie) } },
+    );
+    assert.equal(participantDetail.status, 200);
+    assert.equal((await participantDetail.json()).gameResult.id, gameResult.id);
+    const outsider = await jsonRequest(baseUrl, "/auth/register", {
+      username: `outsider${randomUUID().replaceAll("-", "").slice(0, 10)}`,
+      password,
+    });
+    assert.equal(outsider.response.status, 201);
+    const deniedDetail = await fetch(
+      `${baseUrl}/game-results/${gameResult.id}`,
+      { headers: { Cookie: cookieValue(loginCookie(outsider.response)) } },
+    );
+    assert.equal(deniedDetail.status, 404);
+    const aggregates = await fetch(`${baseUrl}/public/game-results`);
+    assert.equal(aggregates.status, 200);
+    assert.equal(
+      (await aggregates.json()).aggregates.completedGames >= 1,
+      true,
+    );
   } finally {
     server.close();
     await once(server, "close");
