@@ -8,6 +8,7 @@ import WebSocket from "ws";
 
 import { createApp } from "../src/app.js";
 import { createAuthenticationRuntime } from "../src/auth.js";
+import { GAME_TIMEOUT_MS, TICK_MS } from "../src/game/engine.js";
 import { MAP_VERSION } from "../src/game/map.js";
 import { RECONNECT_WINDOW_MS, RealtimeRuntime } from "../src/realtime/index.js";
 import {
@@ -307,6 +308,102 @@ test("Room HTTP actions and real-time Game snapshots use an authenticated bounda
       kind: "aborted",
       reason: "runtime_shutdown",
     });
+
+    const completedRealtime = new RealtimeRuntime({ authentication });
+    const completedServer = createServer(
+      createApp({ authentication, rooms: completedRealtime.rooms }),
+    );
+    completedRealtime.attach(completedServer);
+    completedServer.listen(0, "127.0.0.1");
+    await once(completedServer, "listening");
+    const completedAddress = completedServer.address();
+    assert.notEqual(completedAddress, null);
+    assert.notEqual(typeof completedAddress, "string");
+    const completedBaseUrl = `http://127.0.0.1:${completedAddress.port}`;
+
+    try {
+      const completedRoom = await post(
+        completedBaseUrl,
+        "/rooms",
+        first.cookie,
+      );
+      assert.equal(completedRoom.response.status, 201);
+      const completedRoomCode = completedRoom.body.room.code;
+      for (const [player, character] of [
+        [second, "volt"],
+        [third, "moss"],
+        [fourth, "rose"],
+      ] as const) {
+        assert.equal(
+          (
+            await post(
+              completedBaseUrl,
+              `/rooms/${completedRoomCode}/join`,
+              player.cookie,
+            )
+          ).response.status,
+          200,
+        );
+        assert.equal(
+          (
+            await selectCharacter(
+              completedBaseUrl,
+              completedRoomCode,
+              player.cookie,
+              character,
+            )
+          ).status,
+          200,
+        );
+      }
+      assert.equal(
+        (
+          await selectCharacter(
+            completedBaseUrl,
+            completedRoomCode,
+            first.cookie,
+            "spark",
+          )
+        ).status,
+        200,
+      );
+      for (const player of [first, second, third, fourth]) {
+        assert.equal(
+          (
+            await post(
+              completedBaseUrl,
+              `/rooms/${completedRoomCode}/ready`,
+              player.cookie,
+            )
+          ).response.status,
+          200,
+        );
+      }
+
+      await waitFor(() => completedRealtime.tick(), 3_100);
+      const [connected, connectedMessage] = await openSocket(
+        `ws://127.0.0.1:${completedAddress.port}/realtime?roomCode=${completedRoomCode}`,
+        first.cookie,
+      );
+      assert.equal((await connectedMessage).type, "snapshot");
+      connected.close();
+      await once(connected, "close");
+      for (let elapsed = 0; elapsed < GAME_TIMEOUT_MS; elapsed += TICK_MS)
+        completedRealtime.tick();
+
+      const [completedReconnect, completedMessage] = await openSocket(
+        `ws://127.0.0.1:${completedAddress.port}/realtime?roomCode=${completedRoomCode}`,
+        first.cookie,
+      );
+      const rejection = await completedMessage;
+      assert.equal(rejection.type, "rejected");
+      assert.deepEqual(rejection.payload, { reason: "game_completed" });
+      await once(completedReconnect, "close");
+    } finally {
+      await completedRealtime.close();
+      completedServer.close();
+      await once(completedServer, "close");
+    }
   } finally {
     await realtime.close();
     server.close();
